@@ -1,0 +1,19 @@
+import { route, loadCtx, bad } from "@/lib/api";
+import { getStore } from "@/lib/store";
+import { charge, COSTS } from "@/lib/credits";
+import { genPersonaDoc } from "@/lib/ai";
+
+export const POST = route(async (user, req) => {
+  const b = await req.json();
+  const answers = (b.answers ?? {}) as Record<string, string>;
+  if (!answers.cliente?.trim() || !answers.dor?.trim()) bad("Responda ao menos quem é o seu cliente e a dor dele.");
+  const store = getStore();
+  const ctx = await loadCtx(user.id);
+  const cur = (await store.list("persona", user.id))[0];
+  const filled = ["cliente", "dor", "desejo", "objecao", "decisao"].filter((k) => (answers[k] ?? "").trim().length > 8).length;
+  const tunedPct = Math.round((filled / 5) * 100);
+  if (b.regenerate !== false) await charge(user.id, COSTS.persona, "Persona");
+  const document = genPersonaDoc(answers, ctx.business);
+  const data = { answers, document, source: "app", tunedPct };
+  return cur ? store.update("persona", cur.id, user.id, data) : store.insert("persona", user.id, data);
+});
