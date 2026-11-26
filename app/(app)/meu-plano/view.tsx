@@ -9,9 +9,14 @@ export default function PlanoView({ s, plan, trialEndsAt, costs, start }: any) {
   const r = useRouter();
   const { toast, node } = useToast();
   const [open, setOpen] = useState(false);
+  const [pass, setPass] = useState("");
+  const erase = async () => {
+    if (!confirm("Apagar a sua conta e todos os dados? Não dá para desfazer.")) return;
+    try { await api("/api/account", { method: "DELETE", body: { password: pass } }); window.location.href = "/login"; } catch (e: any) { toast(e.message, "err"); }
+  };
   const total = s.granted || 1;
   const left = Math.max(0, Math.ceil((Date.parse(trialEndsAt) - Date.now()) / 86400000));
-  const more = async () => { try { await api("/api/credits", { body: {} }); toast("Pacote de demonstração adicionado: +20 créditos."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } };
+  const more = async () => { try { await api("/api/credits", { body: {} }); toast("Mais 20 créditos, sem custo."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } };
   return (
     <>
       <PageHead title="Meu plano" desc="Quanto você usou, quanto ainda tem, e onde cada crédito foi parar." />
@@ -23,13 +28,13 @@ export default function PlanoView({ s, plan, trialEndsAt, costs, start }: any) {
           <p className="muted small" style={{ marginTop: 8 }}>{s.used} usados de {s.granted} neste ciclo{plan === "trial" ? ` · o trial termina em ${left} ${left === 1 ? "dia" : "dias"}` : ""}</p>
           <div className="row wrap" style={{ marginTop: 10 }}>
             <button className="btn primary" onClick={more}>Quero mais créditos</button>
-            <button className="btn" onClick={() => toast("Sem gateway de pagamento configurado: a assinatura START (R$ 97 por mês, 100 créditos) fica ativa quando você ligar o Stripe. Veja o README.")}>Gerenciar assinatura</button>
+
           </div>
         </div>
         <div className="card">
           <h2>Quanto custa cada criação</h2>
           <table className="tbl"><tbody>{costs.map((c: any) => <tr key={c.label}><td>{c.label}</td><td style={{ textAlign: "right" }}><b>{c.credits}</b> {c.credits === 1 ? "crédito" : "créditos"}</td></tr>)}</tbody></table>
-          <p className="muted tiny">O START tem {start.monthlyCredits} créditos por mês. Quando a criação rende menos do que o previsto, a diferença volta como estorno.</p>
+          <p className="muted tiny">Sem mensalidade: depois dos 30 dias iniciais entram {start.monthlyCredits} créditos todo mês, e o botão ao lado acrescenta mais quando precisar. Quando a criação rende menos do que o previsto, a diferença volta como estorno.</p>
         </div>
       </div>
       <div className="card" style={{ marginTop: 14 }}>
@@ -42,6 +47,12 @@ export default function PlanoView({ s, plan, trialEndsAt, costs, start }: any) {
             ))}</tbody>
           </table>
         )}
+      </div>
+      <div className="card" style={{ marginTop: 14 }}>
+        <h2>Excluir a conta</h2>
+        <p className="muted small">Apaga o perfil, os números coletados, os textos, os vídeos e o acesso ao Instagram guardado aqui. Não há como desfazer.</p>
+        <div className="row wrap"><input type="password" aria-label="Sua senha para excluir" placeholder="Sua senha" value={pass} onChange={(e) => setPass(e.target.value)} style={{ maxWidth: 260 }} /><button className="btn danger" disabled={!pass} onClick={erase}>Excluir a conta</button></div>
+        <p className="tiny muted" style={{ marginTop: 10 }}><a href="/privacidade">Privacidade</a> · <a href="/termos">Termos de uso</a></p>
       </div>
       {node}
     </>

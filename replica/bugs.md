@@ -25,10 +25,15 @@ Só entra aqui o que foi reproduzido (teste que falhou antes da correção). S1 
 | BUG-019 | S2 | sincronização sem prazo, post a post | teste BUG-019 | corrigido: para no prazo e continua depois |
 | BUG-020 | S1 | no servidor sem banco externo, o app aceitaria dados num disco descartável | teste BUG-020 (módulo novo) | corrigido |
 | BUG-021 | S1 | Next 15.1.6 e React 19.0.0 com vulnerabilidades críticas, entre elas execução remota de código | `npm audit` | corrigido: Next 15.5.29, 0 vulnerabilidades |
+| BUG-022 | S1 | uma chave paga de IA presente no ambiente do computador seria usada sem aviso | teste BUG-022 (função nova; comportamento confirmado na leitura) | corrigido: só com `RV_ALLOW_PAID_AI=1` |
+| BUG-023 | S2 | conta recém-criada, sem persona, quebrava ao criar roteiro sem tema | teste: `s is not iterable` | corrigido |
+
+Também ajustado sem teste que o reproduzisse: a versão padrão da API da Meta passou de v21.0 para v27.0, a dos exemplos atuais da documentação.
 
 ## A verificar (não reproduzido)
 
-- Integração com conta real do Instagram: nomes de métricas, audiência e prazos.
+- Integração com conta real do Instagram: nomes de métricas, audiência, prazos e publicação de Reels.
+- IA gratuita com chave de verdade, inclusive o nome do modelo.
 - `SupabaseStore` contra um Supabase real.
 - Busca de notícias contra o feed real.
 - Alcance do dia atual pode vir com a data deslocada, conforme o `end_time` da Meta.

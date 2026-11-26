@@ -1,0 +1,53 @@
+# Ligar o Instagram e a IA sem gastar
+
+Os dois passos são feitos por você, porque exigem a sua conta e a sua senha. Os nomes dos botões nos sites podem ter mudado.
+
+## 1. Instagram (gratuito)
+
+Antes: a conta do Instagram precisa ser **profissional** (Comercial ou Criador) e estar ligada a uma **Página do Facebook** que você administra.
+
+1. Entre em developers.facebook.com com o seu Facebook e crie um app.
+2. Adicione o produto **Facebook Login** (para empresas).
+3. Deixe o app em **modo de desenvolvimento**. Para a sua própria conta não é preciso enviar para análise; nesse modo a Meta aceita o retorno para `localhost`. Se pedir o endereço de retorno, use `http://localhost:3000/api/ig/callback`.
+4. Em configurações básicas, copie o **ID do app** e a **chave secreta**.
+5. Abra o arquivo `.env.local` na pasta do app com o Bloco de Notas e acrescente, sem apagar a linha `RV_SECRET`:
+
+```
+META_APP_ID=cole-aqui
+META_APP_SECRET=cole-aqui
+```
+
+6. Feche e abra o app. Vá em **Conexões** e clique em **Conectar Instagram**.
+
+Permissões usadas: `instagram_basic`, `instagram_manage_insights`, `instagram_content_publish`, `pages_show_list`, `pages_read_engagement`, `business_management`.
+
+Não cole a chave secreta em conversas nem a envie para o GitHub.
+
+**Isto nunca foi testado com uma conta real.** Se aparecer erro, copie a mensagem (sem chaves) e me mande.
+
+## 2. IA para os textos (opcional, plano gratuito)
+
+1. Em aistudio.google.com, crie uma chave de API em um projeto **sem faturamento ativado**.
+2. Acrescente em `.env.local`:
+
+```
+GEMINI_API_KEY=cole-aqui
+```
+
+3. Feche e abra o app. Roteiros mostram a etiqueta **IA** ou **modelo**.
+
+- Para continuar sem custo, **não ative cobrança** nesse projeto.
+- O plano gratuito tem limite diário, que varia; quando acaba, o app usa o modelo local.
+- O Google pode usar o que for enviado no plano gratuito. **Não escreva dados de pacientes ou clientes** na persona, no negócio ou nos temas.
+- O nome do modelo padrão (`gemini-flash-lite-latest`) não foi testado com chave. Se só aparecer "modelo", defina `GEMINI_MODEL` com um nome listado no AI Studio.
+
+A API paga da Anthropic fica desligada mesmo que exista uma chave no computador.
+
+## 3. Publicar Reels sozinho
+
+Com a conta real conectada: **Planejador editorial**, envie o vídeo, escolha o dia, selecione o vídeo e marque **Publicar sozinho no Instagram neste horário**.
+
+- O app precisa estar aberto e o computador ligado no horário.
+- Com mais de 6 horas de atraso ele não publica e marca como atrasado.
+- Se falhar, ele não tenta de novo sozinho, para nunca publicar em dobro.
+- Faça o primeiro teste com um vídeo que não tenha problema se for ao ar.

@@ -6,18 +6,20 @@ Data: 26/11/2026. Autorização do dono para publicar: **ainda não pedida**. Na
 
 | item | situação |
 | --- | --- |
-| testes de unidade | 34 de 34 |
-| fluxos no navegador | 30 de 30, duas execuções seguidas |
+| testes de unidade | 47 de 47 |
+| fluxos no navegador | 35 de 35 |
 | build de produção | passa (Next 15.5.29) |
 | auditoria de dependências (`npm audit`) | 0 vulnerabilidades |
 | defeitos S1 ou S2 abertos | nenhum reproduzido; ver a lista "a verificar" em `bugs.md` |
-| paridade: obrigatórias | **45 de 53 (reprovado)**; nota 89,0 |
+| paridade: obrigatórias | ver `parity.md`; as que faltam dependem de conta real (reprovado até testar) |
 | varredura de marca | limpa |
-| política de privacidade e termos | **não existem** |
-| exclusão de conta | **não existe** |
-| favicon e imagem social próprios | **não existem** |
+| política de privacidade e termos | existem em `/privacidade` e `/termos`, texto de uso pessoal; sem revisão jurídica |
+| exclusão de conta | existe, com senha |
+| favicon e imagem social próprios | favicon sim; imagem social não |
 
-Pela regra da fase, com itens reprovados o deploy público fica parado. O uso no próprio computador não depende dele.
+Pela regra da fase, com itens reprovados o deploy público fica parado. O uso no próprio computador não depende dele e não tem custo.
+
+Num servidor gratuito a publicação agendada precisaria de um agendador externo e o envio de vídeo não funciona; por isso o uso local é o recomendado.
 
 ## Para publicar, quando for o caso
 1. Dono cria um projeto Supabase **novo** para este app e roda `supabase/migrations/0001_app_docs.sql`.

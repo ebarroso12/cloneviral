@@ -33,25 +33,25 @@ Nota explicando recorte vs total de seguidores,métricas,should,yes,yes,
 Top 12 posts com seletor de 6 métricas,métricas,must,yes,yes,
 Modal do post com Abrir no Instagram,métricas,should,yes,yes,
 Tabela Últimos posts (9 colunas; todos os posts),métricas,must,yes,yes,virtualizar
-Persona: perguntas; documento e % afinada,configurar,must,yes,partial,documento curto gerado por modelo; o original é muito mais longo
-Persona criada pela equipe (Perfil Pronto) não muda ao editar,configurar,could,yes,no,
+Persona: perguntas; documento e % afinada,configurar,must,yes,yes,"documento em seções montado das respostas, mais curto que o do original"
+Persona criada pela equipe (Perfil Pronto) não muda ao editar,configurar,could,yes,skip,depende de uma equipe que escreva a persona; o app é de uso pessoal
 Meu Negócio: 7 partes editáveis + % afinado,configurar,must,yes,yes,
 Identidade Visual: wizard 5 passos com prévia,configurar,must,yes,yes,5 passos com envio de logo; o quarto passo reúne logo e tom
 Aplicar identidade visual aos carrosséis,configurar,must,yes,yes,
-Varredura: alvo (meu perfil/um perfil/meu nicho/um conteúdo),planejar,must,yes,partial,só Meu perfil; a API oficial não entrega perfis de terceiros
+Varredura: alvo (meu perfil/um perfil/meu nicho/um conteúdo),planejar,must,yes,yes,"perfil de terceiro, nicho e conteúdo por texto colado; a API não entrega esses dados"
 Varredura: destino (Reel/Criativo) e tipo (Viral/Emocional/Técnico),planejar,must,yes,yes,
 Varredura: quantos analisar/gerar e duração,planejar,must,yes,yes,
 Varredura: tema opcional que sobrepõe o assunto,planejar,should,yes,yes,
 Varredura: lista de varreduras e padrões salvos,planejar,must,yes,yes,
 Varredura: reembolso quando rende menos que o previsto,planejar,should,yes,partial,estorno de entrega menor existe mas nunca é acionado pelo gerador local
 Sugestão de perfis (12 créditos),planejar,could,yes,no,exige dados de perfis de terceiros
-Notícias: assuntos + Buscar agora + artigo pronto,planejar,should,yes,partial,busca no feed público não testada; texto do artigo é modelo curto
+Notícias: assuntos + Buscar agora + artigo pronto,planejar,should,yes,yes,busca no feed real testada; o texto de ângulo é modelo curto sem IA
 Ideias: kanban 4 colunas com arrastar,planejar,must,yes,yes,
 Ideia vira roteiro,planejar,should,yes,yes,
 Roteiro: cartão com tipo/destino/duração/gancho,criar,must,yes,yes,1 crédito
 Roteiro: Abrir/Editar/Copiar/Teleprompter/Já gravei/PDF/Regenerar/Excluir,criar,must,yes,yes,
 Carrossel: escrever slides; aprovar; depois desenhar 1080x1440,criar,must,yes,yes,2 créditos
-Carrossel: usar padrão da Varredura e idioma,criar,should,yes,partial,padrão ok; outro idioma só com ANTHROPIC_API_KEY
+Carrossel: usar padrão da Varredura e idioma,criar,should,yes,partial,padrão ok; outro idioma só com uma IA configurada
 Carrossel: 100 modelos em 13 categorias,criar,must,yes,yes,criar catálogo próprio
 Carrossel: foto própria na capa (PNG/JPEG) sem custo,criar,should,yes,yes,
 Carrossel: imagem por IA,criar,could,yes,skip,indisponível no original também
@@ -62,14 +62,14 @@ CopyCut,criar,could,no,skip,Em breve no original
 Planejador: calendário mensal com agendamentos,publicar,must,yes,yes,
 Planejador: linha editorial (Viral/Emocional/Técnico por mês),publicar,must,yes,yes,
 Planejador: vídeos guardados + upload MP4/MOV 100 MB 3 min,publicar,must,yes,yes,
-Planejador: publicar como Reels no horário marcado,publicar,must,yes,no,exige app Meta aprovado e vídeo em endereço público
+Planejador: publicar como Reels no horário marcado,publicar,must,yes,partial,"envio direto do arquivo e agendador prontos, testados só com a Meta simulada"
 Perfil Pronto (documento entregue pela equipe),exclusivos,could,yes,skip,conteúdo e equipe do original; existe um Perfil Pronto próprio gerado do negócio
 Círculo dos 100: hub com 4 ferramentas,exclusivos,could,yes,yes,
-Sala de Análise de vídeo (resposta em até 3 dias),exclusivos,could,yes,no,no original é revisão humana de vídeo; aqui há análise automática dos números
+Sala de Análise de vídeo (resposta em até 3 dias),exclusivos,could,yes,partial,"análise automática de roteiro, arquivo de vídeo e perfil; no original é revisão humana"
 Raio-X do Perfil (6 partes),exclusivos,could,yes,yes,foto e destaques ficam como conferir: o app não avalia imagem
 LazaStory (assistente de Stories),exclusivos,could,yes,partial,original visto de relance
 32 roteiros prontos,exclusivos,could,yes,skip,conteúdo do original
 Meu plano: cota; custos; extrato (cobrado/devolvido/usado),plano,must,yes,yes,
-Trial 30 dias com 30 créditos; START 100 créditos/mês,plano,must,yes,partial,trial concede 30 créditos; não há renovação mensal nem bloqueio no fim
-Comprar mais créditos e gerenciar assinatura,plano,must,yes,partial,sem pagamento; Quero mais créditos concede pacote sem cobrar
+Trial 30 dias com 30 créditos; START 100 créditos/mês,plano,must,yes,yes,"30 créditos no teste e depois 100 por mês, sem cobrança"
+Comprar mais créditos e gerenciar assinatura,plano,must,yes,skip,regra do dono: sem gasto; não há assinatura. Créditos extras são livres
 Débito de crédito na criação e estorno parcial,plano,must,yes,yes,ledger imutável

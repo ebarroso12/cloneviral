@@ -1,0 +1,81 @@
+// Publicação de Reels pela API oficial, com envio direto do arquivo (upload retomável): não precisa
+// de endereço público nem de serviço pago. Documentação: IG User Media e Content Publishing, da Meta.
+import fs from "node:fs";
+import { getStore, type Doc } from "./store";
+import { decrypt, GRAPH, gj } from "./instagram";
+import { videoPath } from "./videos";
+
+const LATE_LIMIT = 6 * 3600_000; // passou disso, não publica de surpresa: o dono decide
+const STUCK_LIMIT = 30 * 60_000;
+
+export async function publishReel(conn: Record<string, any>, file: string, caption: string, opts: { pollMs?: number; maxPolls?: number } = {}) {
+  const userToken = decrypt(conn.token);
+  let token = userToken;
+  try {
+    const page = await gj(`${GRAPH}/${conn.pageId}?fields=access_token&access_token=${userToken}`);
+    if (page.access_token) token = page.access_token;
+  } catch {
+    // sem token da Página a Meta ainda pode aceitar o do usuário; se não aceitar, o erro aparece abaixo
+  }
+  const q = new URLSearchParams({ media_type: "REELS", upload_type: "resumable", caption, access_token: token });
+  const created = await gj(`${GRAPH}/${conn.igId}/media?${q}`, { method: "POST" });
+  const target = new URL(String(created.uri));
+  if (target.protocol !== "https:" || target.hostname !== "rupload.facebook.com") throw new Error("A Meta devolveu um endereço de envio inesperado.");
+  const bytes = fs.readFileSync(file);
+  await gj(target.toString(), { method: "POST", headers: { Authorization: `OAuth ${token}`, offset: "0", file_size: String(bytes.length) }, body: bytes, timeoutMs: 600_000 });
+
+  const wait = opts.pollMs ?? 15_000;
+  for (let i = 0; ; i++) {
+    const s = await gj(`${GRAPH}/${created.id}?fields=status_code&access_token=${token}`);
+    if (s.status_code === "FINISHED") break;
+    if (s.status_code === "ERROR" || s.status_code === "EXPIRED") throw new Error(`A Meta não processou o vídeo (${s.status_code}).`);
+    if (i >= (opts.maxPolls ?? 20)) throw new Error("A Meta demorou demais para processar o vídeo. Confira no Instagram antes de tentar de novo.");
+    await new Promise((r) => setTimeout(r, wait));
+  }
+  const done = await gj(`${GRAPH}/${conn.igId}/media_publish`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ creation_id: created.id }) });
+  return String(done.id);
+}
+
+type Result = { id: string; status: string; error?: string };
+const g = globalThis as unknown as { __publishing?: Promise<Result[]> };
+
+/** Publica o que está na hora. Chamadas simultâneas compartilham a mesma rodada. */
+export function publishDue(now: Date = new Date(), opts: { pollMs?: number } = {}): Promise<Result[]> {
+  g.__publishing ||= run(now, opts).finally(() => { g.__publishing = undefined; });
+  return g.__publishing;
+}
+
+async function run(now: Date, opts: { pollMs?: number }) {
+  const store = getStore();
+  const posts = await store.findAll("scheduled_posts", (p) => p.autoPublish === true && (p.status === "agendado" || p.status === "publicando"));
+  const results: Result[] = [];
+  const set = async (p: Doc, status: string, extra: Record<string, any> = {}) => {
+    await store.update("scheduled_posts", p.id, p.userId, { status, ...extra });
+    results.push({ id: p.id, status, error: extra.error });
+  };
+  for (const p of posts) {
+    if (p.status === "publicando") {
+      // o app fechou no meio: não dá para saber se saiu, então não repete
+      if (now.getTime() - Date.parse(p.startedAt) > STUCK_LIMIT) await set(p, "conferir", { error: "O app fechou durante a publicação. Confira no Instagram." });
+      continue;
+    }
+    const due = new Date(`${p.date}T${p.time}:00`).getTime(); // horário do computador
+    if (!Number.isFinite(due)) { await set(p, "falhou", { error: "Data ou horário inválido." }); continue; }
+    if (due > now.getTime()) continue;
+    if (now.getTime() - due > LATE_LIMIT) { await set(p, "atrasado", { error: "O app estava fechado no horário. Reagende para publicar." }); continue; }
+    await store.update("scheduled_posts", p.id, p.userId, { status: "publicando", startedAt: now.toISOString() });
+    try {
+      const [conn] = await store.list("ig_connection", p.userId);
+      if (!conn || conn.demo || conn.status !== "connected") throw new Error("Não há conta real do Instagram conectada.");
+      const video = p.videoId ? await store.get("videos", String(p.videoId)) : null;
+      if (!video || video.userId !== p.userId) throw new Error("Escolha um vídeo enviado para publicar.");
+      const file = videoPath(p.userId, video as any);
+      if (!fs.existsSync(file)) throw new Error("O arquivo do vídeo não está mais no computador.");
+      const mediaId = await publishReel(conn, file, String(p.caption ?? "").slice(0, 2200), opts);
+      await set(p, "publicado", { mediaId, publishedAt: new Date().toISOString(), error: null });
+    } catch (e: any) {
+      await set(p, "falhou", { error: String(e?.message ?? e).slice(0, 300) });
+    }
+  }
+  return results;
+}

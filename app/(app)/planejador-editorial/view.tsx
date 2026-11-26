@@ -13,7 +13,7 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
   const { toast, node } = useToast();
   const [ref, setRef] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [day, setDay] = useState<string | null>(null);
-  const [f, setF] = useState<any>({ time: "18:00", caption: "", videoId: "", scriptId: "", kind: "viral" });
+  const [f, setF] = useState<any>({ time: "18:00", caption: "", videoId: "", scriptId: "", kind: "viral", autoPublish: false });
   const [lineS, setLineS] = useState(line);
   const [up, setUp] = useState(false);
   const todayIso = iso(new Date());
@@ -34,7 +34,7 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
   };
   const schedule = async () => {
     if (!day) return;
-    try { await api("/api/c/scheduled_posts", { body: { date: day, time: f.time, caption: f.caption, videoId: f.videoId || null, scriptId: f.scriptId || null, kind: f.kind, status: "agendado" } }); toast("Post agendado."); setDay(null); setF({ ...f, caption: "" }); r.refresh(); } catch (e: any) { toast(e.message, "err"); }
+    try { await api("/api/c/scheduled_posts", { body: { date: day, time: f.time, caption: f.caption, videoId: f.videoId || null, scriptId: f.scriptId || null, kind: f.kind, status: "agendado", autoPublish: real && !!f.videoId && f.autoPublish } }); toast("Post agendado."); setDay(null); setF({ ...f, caption: "" }); r.refresh(); } catch (e: any) { toast(e.message, "err"); }
   };
   const del = async (id: string) => { await api(`/api/c/scheduled_posts?id=${id}`, { method: "DELETE" }); r.refresh(); };
   const inDay = day ? posts.filter((p: any) => p.date === day) : [];
@@ -62,7 +62,7 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
             </button>
           ) : <div key={i} />)}
         </div>
-        {!real && <p className="muted tiny" style={{ marginTop: 10 }}>A publicação automática no Instagram depende de uma conta conectada de verdade e de um app Meta aprovado. Por enquanto o planejador guarda e organiza os posts; publique manualmente na hora marcada.</p>}
+        <p className="muted tiny" style={{ marginTop: 10 }}>{real ? "Marque Publicar sozinho ao agendar um vídeo. O app precisa estar aberto no horário." : "Conecte uma conta real do Instagram para publicar automaticamente. Até lá o planejador organiza os posts."}</p>
       </div>
       <div className="card" style={{ marginTop: 14 }}>
         <div className="row between"><h2>Vídeos</h2><label className="btn primary" style={{ cursor: "pointer" }}>{up ? "Enviando..." : "Enviar vídeo"}<input type="file" accept=".mp4,.mov,video/mp4,video/quicktime" hidden onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} /></label></div>
@@ -71,7 +71,7 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
       </div>
       {day && (
         <Modal onClose={() => setDay(null)} title={`Dia ${day.split("-").reverse().join("/")}`}>
-          {inDay.map((p: any) => <div key={p.id} className="row between" style={{ marginBottom: 6 }}><span>{p.time} · {p.kind} · {p.caption.slice(0, 40)}</span><button className="btn sm danger" onClick={() => del(p.id)}>Remover</button></div>)}
+          {inDay.map((p: any) => <div key={p.id} className="row between" style={{ marginBottom: 6 }}><span>{p.time} · {p.kind} · {p.caption.slice(0, 40)} <span className={"tag " + (p.status === "publicado" ? "green" : p.status === "agendado" ? "" : "yellow")}>{p.status}{p.autoPublish ? " · automático" : ""}</span>{p.error && <div className="tiny err">{p.error}</div>}</span><button className="btn sm danger" onClick={() => del(p.id)}>Remover</button></div>)}
           <div className="grid g2">
             <div className="field"><label htmlFor="h">Horário</label><input id="h" type="time" value={f.time} onChange={(e) => setF({ ...f, time: e.target.value })} /></div>
             <div className="field"><label htmlFor="k">Tipo</label><select id="k" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}><option value="viral">Viral</option><option value="emocional">Emocional</option><option value="tecnico">Técnico</option></select></div>
@@ -79,6 +79,8 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
           <div className="field"><label htmlFor="v">Vídeo</label><select id="v" value={f.videoId} onChange={(e) => setF({ ...f, videoId: e.target.value })}><option value="">Sem vídeo</option>{videos.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></div>
           <div className="field"><label htmlFor="s">Roteiro</label><select id="s" value={f.scriptId} onChange={(e) => { const sc = scripts.find((x: any) => x.id === e.target.value); setF({ ...f, scriptId: e.target.value, caption: sc ? `${sc.hook}\n\n${sc.cta}` : f.caption }); }}><option value="">Nenhum</option>{scripts.map((s: any) => <option key={s.id} value={s.id}>{s.title}</option>)}</select></div>
           <div className="field"><label htmlFor="c">Legenda</label><textarea id="c" value={f.caption} onChange={(e) => setF({ ...f, caption: e.target.value })} /></div>
+          <label className="row small" style={{ marginBottom: 12 }}><input type="checkbox" style={{ width: "auto" }} checked={real && !!f.videoId && f.autoPublish} disabled={!real || !f.videoId} onChange={(e) => setF({ ...f, autoPublish: e.target.checked })} /> Publicar sozinho no Instagram neste horário</label>
+          <p className="tiny muted">{!real ? "Disponível depois de conectar a sua conta real em Conexões." : !f.videoId ? "Escolha um vídeo para liberar a publicação automática." : "O app precisa estar aberto no horário. Com mais de 6 horas de atraso ele não publica e avisa."}</p>
           <button className="btn primary" onClick={schedule}>Agendar</button>
         </Modal>
       )}

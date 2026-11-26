@@ -30,4 +30,4 @@ Legenda do status: `não rodado`, `passou`, `falhou (BUG-nnn)`, `manual`.
 
 Manual, sem como automatizar hoje: OAuth real da Meta, sincronização com conta real, publicação agendada, cobrança.
 
-Última execução: 26/11/2026, 34 de 34 testes de unidade e 30 de 30 fluxos.
+Última execução: 26/11/2026, 47 de 47 testes de unidade e 35 de 35 fluxos.

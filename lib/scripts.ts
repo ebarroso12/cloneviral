@@ -5,8 +5,8 @@ import type { ScriptOut } from "./ai";
 export async function saveScripts(userId: string, list: ScriptOut[], replaceId?: string) {
   const store = getStore();
   if (replaceId) {
-    const { title, hook, body, cta } = list[0];
-    const doc = await store.update("scripts", replaceId, userId, { title, hook, body, cta });
+    const { title, hook, body, cta, generator } = list[0];
+    const doc = await store.update("scripts", replaceId, userId, { title, hook, body, cta, generator });
     if (!doc) throw new Error("Roteiro não encontrado.");
     return [doc];
   }

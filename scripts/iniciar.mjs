@@ -25,13 +25,25 @@ const maisNovo = (dir) => fs.readdirSync(dir, { withFileTypes: true }).reduce((m
   const p = path.join(dir, e.name);
   return Math.max(m, e.isDirectory() ? maisNovo(p) : fs.statSync(p).mtimeMs);
 }, 0);
-const construir = !fs.existsSync(marca) || Math.max(...["app", "components", "lib"].map(maisNovo), fs.statSync("package.json").mtimeMs) > fs.statSync(marca).mtimeMs;
+const construir = !fs.existsSync(marca) || Math.max(...["app", "components", "lib"].map(maisNovo), fs.statSync("package.json").mtimeMs, fs.statSync("instrumentation.ts").mtimeMs) > fs.statSync(marca).mtimeMs;
 if (construir) {
   console.log("Preparando o app (leva alguns minutos na primeira vez)...");
   const r = spawnSync(process.execPath, [next, "build"], { stdio: "inherit", env });
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 console.log(`\nApp em http://localhost:${port}  (feche esta janela para encerrar)\n`);
+// cópia diária dos dados, guardando as 14 mais recentes
+const dados = process.env.RV_DATA_DIR || "data";
+const db = path.join(dados, "db.json");
+if (fs.existsSync(db)) {
+  const dir = path.join(dados, "backups");
+  fs.mkdirSync(dir, { recursive: true });
+  const copia = path.join(dir, `db-${new Date().toISOString().slice(0, 10)}.json`);
+  if (!fs.existsSync(copia)) fs.copyFileSync(db, copia);
+  const antigas = fs.readdirSync(dir).filter((f) => /^db-\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().slice(0, -14);
+  for (const f of antigas) fs.rmSync(path.join(dir, f));
+}
+env.RV_SCHEDULER = "1"; // publica o agendado e coleta os números enquanto o app estiver aberto
 // só no próprio computador: não fica visível para outros aparelhos da rede
 const server = spawn(process.execPath, [next, "start", "-H", "127.0.0.1", "-p", port], { stdio: "inherit", env });
 server.on("exit", (c) => process.exit(c ?? 0));

@@ -260,7 +260,7 @@ def plano(page):
     assert sum(r["amount"] for r in s["rows"]) == s["available"]
     ir(page, "meu-plano")
     page.get_by_role("button", name="Quero mais créditos").click()
-    page.get_by_text("+20 créditos").first.wait_for()
+    page.get_by_text("Mais 20 créditos, sem custo.", exact=True).wait_for()
     assert saldo(page) == s["available"] + 20
 
 
@@ -277,11 +277,19 @@ def serie(page):
 
 @caso("F07-H1 sala de análise, raio-x e stories")
 def circulo(page):
-    for rota, botao, ok in [("clube/sala-de-analise", "Analisar meu perfil · 2 créditos", "Análise pronta."),
-                            ("clube/raio-x", "Fazer raio-x · 1 crédito", "Raio-X pronto.")]:
-        ir(page, rota)
-        page.get_by_role("button", name=botao).click()
-        page.get_by_text(ok).wait_for()
+    ir(page, "clube/sala-de-analise")
+    page.locator("#rt").fill("Você dorme mal? Apague as telas uma hora antes. Salve este vídeo.")
+    page.get_by_role("button", name="Analisar roteiro").click()
+    page.get_by_text("Gancho", exact=True).wait_for()
+    page.get_by_role("button", name="Vídeo", exact=True).click()
+    page.locator("#av").set_input_files({"name": "a.mp4", "mimeType": "video/mp4", "buffer": b"0" * 1024})
+    page.get_by_text("Não consegui ler as dimensões.").wait_for()
+    page.get_by_role("button", name="Perfil", exact=True).click()
+    page.get_by_role("button", name="Analisar meu perfil · 2 créditos").click()
+    page.get_by_text("Análise pronta.", exact=True).wait_for()
+    ir(page, "clube/raio-x")
+    page.get_by_role("button", name="Fazer raio-x · 1 crédito").click()
+    page.get_by_text("Raio-X pronto.", exact=True).wait_for()
     ir(page, "clube/raio-x")
     page.get_by_role("button", name="Raio-X do perfil · 2 créditos").click()
     page.get_by_text("Raio-X do perfil pronto.").wait_for()
@@ -439,6 +447,65 @@ def sair(page):
     assert api(page, "GET", "/api/metrics")[0] == 401
 
 
+@caso("S06 varredura com texto colado (um perfil)")
+def varredura_colada(page):
+    antes = saldo(page)
+    ir(page, "varredura")
+    page.get_by_role("button", name="Um perfil").click()
+    assert page.get_by_role("button", name=re.compile("^Iniciar varredura")).is_disabled()
+    page.locator("#sample").fill("Você acorda cansado?\nSalve este post.\n\n3 sinais de alerta.")
+    page.get_by_role("button", name=re.compile("^Iniciar varredura")).click()
+    page.get_by_text("Varredura pronta.", exact=True).wait_for(timeout=60000)
+    assert antes - saldo(page) == 8
+    textos = json.dumps(api(page, "GET", "/api/c/scripts")[1], ensure_ascii=False)
+    assert "acorda cansado" not in textos.lower(), "copiou a frase de terceiro como assunto"
+
+
+@caso("S07 notícias no feed real")
+def noticias(page):
+    ir(page, "noticias")
+    page.get_by_label("Novo assunto").fill("qualidade do sono")
+    page.get_by_role("button", name="Adicionar").click()
+    page.get_by_role("button", name="Remover qualidade do sono").wait_for()
+    page.get_by_role("button", name="Buscar agora · 1 crédito").click()
+    page.get_by_role("link", name="Ler a notícia").first.wait_for(timeout=45000)
+    n = api(page, "GET", "/api/c/news_items")[1]
+    assert n and n[0]["title"] and n[0]["link"].startswith("https://"), n[:1]
+
+
+@caso("S15 publicação automática só com conta real")
+def auto(page):
+    ir(page, "planejador-editorial")
+    page.locator(".cal button.today").click()
+    assert page.get_by_label("Publicar sozinho no Instagram neste horário").is_disabled()
+    assert api(page, "GET", "/api/cron/publish")[0] == 401
+
+
+@caso("Privacidade e termos abrem sem login")
+def legais(browser):
+    p = browser.new_context().new_page()
+    for rota, titulo in [("privacidade", "Privacidade"), ("termos", "Termos de uso")]:
+        assert p.goto(f"{BASE}/{rota}").status == 200
+        p.get_by_role("heading", name=titulo, level=1).wait_for()
+    assert p.request.get(f"{BASE}/icon.svg").status == 200
+
+
+@caso("Excluir conta: senha errada recusa, senha certa apaga")
+def excluir(browser):
+    p = browser.new_context().new_page()
+    vigiar(p)
+    assert api(p, "POST", "/api/auth/login", {"email": "dono@exemplo.test", "password": "senha-de-teste-123"})[0] == 200
+    api(p, "POST", "/api/c/ideas", {"text": "some com a conta"})
+    ir(p, "meu-plano")
+    p.get_by_label("Sua senha para excluir").fill("errada-errada")
+    p.get_by_role("button", name="Excluir a conta").click()
+    p.get_by_text("Senha incorreta").wait_for()
+    p.get_by_label("Sua senha para excluir").fill("senha-de-teste-123")
+    p.get_by_role("button", name="Excluir a conta").click()
+    p.wait_for_url("**/login", timeout=30000)
+    assert api(p, "POST", "/api/auth/login", {"email": "dono@exemplo.test", "password": "senha-de-teste-123"})[0] == 401
+
+
 @caso("SEG-1 primeiro dono não vê a demonstração; segundo cadastro é recusado")
 def isolamento(browser, demo):
     alheio = api(demo, "GET", "/api/c/scripts")[1][0]["id"]
@@ -487,9 +554,11 @@ with sync_playwright() as pw:
         f(pagina)
     for _ in range(2):
         api(pagina, "POST", "/api/credits", {})
-    for f in [acoes_roteiro, arrastar, catalogo, isca_colada]:
+    for f in [acoes_roteiro, arrastar, catalogo, isca_colada, varredura_colada, noticias, auto]:
         f(pagina)
     isolamento(nav, pagina)
+    legais(nav)
+    excluir(nav)
     sair(pagina)
     forca_bruta(nav)
     nav.close()

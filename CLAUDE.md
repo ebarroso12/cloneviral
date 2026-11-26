@@ -35,12 +35,16 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 - **API**: handlers usam `route()` de `lib/api.ts` (autentica e converte `HttpError` e `InsufficientCredits` em 401/4xx/402). CRUD simples passa por `app/api/c/[collection]`, que só aceita as listas `WRITABLE` e `READONLY`: coleção nova precisa entrar nelas.
 - **Cliente** chama a API com `api()` de `lib/client.ts`.
 - **Créditos** (`lib/credits.ts`): livro-razão `ledger`; saldo é a soma das linhas. Cobrar antes de gerar (`charge`) e devolver a diferença (`refund`) se render menos. Os custos em `COSTS` reproduzem o original e há teste sobre eles.
-- **Conteúdo** (`lib/ai.ts`): geradores por modelo, determinísticos e sem custo. Com `ANTHROPIC_API_KEY`, `llmJson` tenta o modelo pago e qualquer falha cai em silêncio no gerador por modelo, então texto genérico não prova que a IA respondeu.
+- **Conteúdo** (`lib/ai.ts`): geradores por modelo, determinísticos e sem custo. Com `GEMINI_API_KEY` (plano gratuito), `llmJson` tenta a IA e cai no modelo local se falhar; roteiros guardam `generator` (`ia` ou `modelo`).
+- **Agendador** (`instrumentation.ts` + `lib/scheduler.ts`): só com `RV_SCHEDULER=1` (o atalho local liga); publica o vencido a cada minuto e coleta os números uma vez por dia.
 - **Métricas** (`lib/metrics.ts`): funções puras sobre posts, snapshots e audiência. `tests/metrics.test.ts` fixa os números observados na tela original; mudança de fórmula tem de ser conferida com `replica/recon.md`. O terceiro sinal da autenticidade (comentários por curtida) é hipótese não confirmada.
 - **Instagram** (`lib/instagram.ts`): OAuth do Facebook Login + Graph API, token em AES-256-GCM com chave derivada de `RV_SECRET` (obrigatória em produção). `syncAccount` tem prazo e devolve `partial`; `syncAll` serve `/api/cron/sync`. Os testes simulam o `fetch`.
 - **Sessão** (`lib/auth.ts`): scrypt, cookie `rv_session`, hash do token em `sessions`.
 
 ## Regras que o código já garante (não desfazer)
+
+- Regra do dono: **nenhum gasto**. Não ligar serviço pago; `aiProvider` só usa a Anthropic com `RV_ALLOW_PAID_AI=1`.
+- Publicação (`lib/publish.ts`) é ação para fora: só com `autoPublish` marcado pelo dono, uma rodada por vez, sem repetir falha e sem publicar com mais de 6 horas de atraso.
 
 - Chave fixa (`conn`, `aud`, `snap_<data>`, id de post da Meta) vira `scopedId(userId, chave)`. `insert` recusa id de outra conta.
 - Corpo vindo do navegador passa por `clientData`; documento que sai para o navegador passa por `publicDoc` (remove `token`).
@@ -53,7 +57,7 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 
 ## Limitações abertas
 
-Publicação automática (`/api/cron/publish` responde 501), pagamento, envio de vídeo na Vercel, e integração com Instagram e Supabase nunca testadas contra serviço real.
+Instagram (conexão, coleta, publicação), Gemini e Supabase nunca testados contra o serviço real. Envio de vídeo não funciona na Vercel.
 
 ## Pipeline replica e regras do projeto
 

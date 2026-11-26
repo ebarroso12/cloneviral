@@ -10,13 +10,13 @@ Consequência: não existe base para dizer o que os usuários do original odeiam
 
 | prioridade | melhoria | tamanho | estado |
 | --- | --- | --- | --- |
-| 1 | texto gerado por IA de verdade (hoje os modelos repetem frases entre slides) | P | depende de `ANTHROPIC_API_KEY` (custo por uso) |
+| 1 | texto por IA sem custo; modelos locais sem frases repetidas | P | feito; a IA depende de chave gratuita do dono |
 | 2 | conexão real com o Instagram testada | M | depende do app Meta do dono |
-| 3 | publicação automática dos agendados | G | não feito |
+| 3 | publicação automática dos agendados | G | feito, falta testar com conta real |
 | 4 | métrica que não veio nunca vira zero, e a falha é mostrada | P | feito |
 | 5 | falha na criação devolve o crédito | P | feito |
 | 6 | nenhum número estimado apresentado como medido (anúncios) | P | feito |
-| 7 | uso do dono sem cobrança de créditos | P | decisão do dono |
+| 7 | uso do dono sem cobrança | P | feito: cota mensal grátis |
 
 ## Posicionamento
 O dono declarou uso próprio. Frase de trabalho: "Para mim, que quero medir o meu perfil e produzir conteúdo sem pagar assinatura: um painel que só mostra o que foi medido." Não há evidência de mercado por trás dela.

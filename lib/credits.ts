@@ -1,4 +1,4 @@
-import { getStore } from "./store";
+import { getStore, scopedId } from "./store";
 
 // Custos por criação (créditos). Medidos na tela "Meu plano" do original.
 export const COSTS = {
@@ -65,8 +65,23 @@ function exclusive<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/** Depois do teste de 30 dias, libera a cota do mês uma única vez. Não há cobrança: o app é do dono. */
+export function ensureCycle(userId: string, now: Date = new Date()) {
+  return exclusive(userId, async () => {
+    const store = getStore();
+    const user = await store.get("users", userId);
+    if (!user || user.demo || !user.trialEndsAt || now < new Date(user.trialEndsAt)) return;
+    const month = now.toISOString().slice(0, 7);
+    const id = scopedId(userId, `ciclo-${month}`);
+    if (await store.get("ledger", id)) return;
+    await store.insert("ledger", userId, { at: now.toISOString(), kind: "grant", amount: PLANS.start.monthlyCredits, label: `Cota de ${month.slice(5)}/${month.slice(0, 4)}` }, id);
+    if (user.plan !== "start") await store.update("users", userId, userId, { plan: "start" });
+  });
+}
+
 /** Cobra, executa e devolve o crédito se a criação falhar. */
 export async function withCharge<T>(userId: string, amount: number, label: string, fn: () => Promise<T>, refId?: string): Promise<T> {
+  await ensureCycle(userId);
   await charge(userId, amount, label, refId);
   try {
     return await fn();

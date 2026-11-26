@@ -17,18 +17,20 @@ export default function VarreduraView({ sweeps, scripts, patterns }: any) {
   const [n, setN] = useState(5);
   const [dur, setDur] = useState("variado");
   const [theme, setTheme] = useState("");
+  const [sample, setSample] = useState("");
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<string | null>(sweeps[0]?.id ?? null);
   const tog = (t: string) => setTypes(types.includes(t) ? types.filter((x) => x !== t) : [...types, t]);
   const go = async () => {
     setBusy(true);
-    try { const res = await api("/api/ai/varredura", { body: { target, dest, types, analyze, scripts: n, duration: dur, theme } }); setOpenId(res.sweepId); toast("Varredura pronta."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); }
+    try { const res = await api("/api/ai/varredura", { body: { target, dest, types, analyze, scripts: n, duration: dur, theme, sample } }); setOpenId(res.sweepId); toast("Varredura pronta."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); }
   };
   return (
     <>
       <PageHead title="Varredura" desc="O app estuda os posts que mais funcionaram, acha o padrão do gancho e do formato, e escreve roteiros novos em cima dele." />
       <div className="card">
-        <div className="field"><label>O que varrer</label><div className="chips">{[["perfil", "Meu perfil"], ["um-perfil", "Um perfil"], ["nicho", "Um nicho"], ["conteudo", "Um conteúdo"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={target === k} onClick={() => setTarget(k)}>{v}</button>)}</div>{target !== "perfil" && <span className="muted tiny">Só a varredura do seu próprio perfil tem dado completo por enquanto: perfis de terceiros dependem de acesso que a API oficial do Instagram não dá.</span>}</div>
+        <div className="field"><label>O que varrer</label><div className="chips">{[["perfil", "Meu perfil"], ["um-perfil", "Um perfil"], ["nicho", "Um nicho"], ["conteudo", "Um conteúdo"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={target === k} onClick={() => setTarget(k)}>{v}</button>)}</div>{target !== "perfil" && <span className="muted tiny">A API oficial do Instagram não entrega conteúdo de terceiros. Cole abaixo o que você quer estudar; eu extraio só a estrutura e escrevo sobre o seu assunto.</span>}</div>
+        {target !== "perfil" && <div className="field"><label htmlFor="sample">Legendas ou roteiros para estudar (uma linha em branco entre cada um)</label><textarea id="sample" style={{ minHeight: 140 }} value={sample} onChange={(e) => setSample(e.target.value)} /></div>}
         <div className="grid g2">
           <div className="field"><label>Destino</label><div className="chips">{[["reel", "Reel"], ["criativo", "Criativo"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={dest === k} onClick={() => setDest(k)}>{v}</button>)}</div></div>
           <div className="field"><label>Tipos de roteiro</label><div className="chips">{[["viral", "Viral"], ["emocional", "Emocional"], ["tecnico", "Técnico"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={types.includes(k)} onClick={() => tog(k)}>{v}</button>)}</div></div>
@@ -39,7 +41,7 @@ export default function VarreduraView({ sweeps, scripts, patterns }: any) {
           <div className="field"><label htmlFor="du">Duração</label><select id="du" value={dur} onChange={(e) => setDur(e.target.value)}>{["variado", "15", "30", "45", "60"].map((x) => <option key={x} value={x}>{x === "variado" ? "Variada" : x + " s"}</option>)}</select></div>
         </div>
         <div className="field"><label htmlFor="th">Tema (opcional)</label><input id="th" value={theme} onChange={(e) => setTheme(e.target.value)} /></div>
-        <button className="btn primary" onClick={go} disabled={busy || !types.length}>{busy ? "Varrendo..." : `Iniciar varredura · ${cost(n)} créditos`}</button>
+        <button className="btn primary" onClick={go} disabled={busy || !types.length || (target !== "perfil" && !sample.trim())}>{busy ? "Varrendo..." : `Iniciar varredura · ${cost(n)} créditos`}</button>
         <p className="muted tiny" style={{ marginTop: 8 }}>Se a varredura entregar menos roteiros do que o previsto, a diferença volta para você em créditos.</p>
       </div>
       <h2 style={{ margin: "22px 0 10px" }}>Suas varreduras</h2>

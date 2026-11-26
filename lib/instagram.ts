@@ -3,8 +3,9 @@
 import crypto from "node:crypto";
 import { getStore, scopedId } from "./store";
 
-const V = process.env.META_GRAPH_VERSION || "v21.0";
-const G = `https://graph.facebook.com/${V}`;
+const V = process.env.META_GRAPH_VERSION || "v27.0"; // versão usada nos exemplos atuais da documentação
+export const GRAPH = `https://graph.facebook.com/${V}`;
+const G = GRAPH;
 export const metaConfigured = () => !!(process.env.META_APP_ID && process.env.META_APP_SECRET);
 export const SCOPES = ["instagram_basic", "instagram_manage_insights", "instagram_content_publish", "pages_show_list", "pages_read_engagement", "business_management"];
 
@@ -26,8 +27,9 @@ export function decrypt(payload: string) {
   return Buffer.concat([d.update(enc), d.final()]).toString("utf8");
 }
 
-async function gj(url: string) {
-  const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
+export async function gj(url: string, opts: { method?: string; headers?: Record<string, string>; body?: any; timeoutMs?: number } = {}) {
+  const { timeoutMs = 20000, ...init } = opts;
+  const r = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   const j = await r.json();
   if (!r.ok || j.error) throw new Error(j.error?.message || `Graph ${r.status}`);
   return j;

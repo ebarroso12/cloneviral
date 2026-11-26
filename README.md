@@ -40,14 +40,20 @@ python e2e/fluxos.py http://localhost:3100
 
 Escrito conforme a documentação oficial e testado apenas com a Meta **simulada**. Nunca rodou contra uma conta real.
 
+## Sem custo
+
+Nada aqui cobra: dados no seu computador, textos por modelo local, publicação pela API oficial da Meta e, se você quiser, IA no plano gratuito. Passo a passo em [`replica/guia-gratis.md`](replica/guia-gratis.md).
+
+Com o atalho aberto, o app publica o que você agendou, coleta os números uma vez por dia e guarda 14 cópias diárias em `data/backups/`.
+
 ## O que não está pronto
 
-- Publicação automática dos posts agendados.
-- Cobrança do plano e renovação mensal de créditos.
-- Perfis de terceiros e sugestão de perfis (a API oficial não entrega).
+- Instagram (conexão, coleta e publicação) e IA gratuita: testados só com respostas simuladas.
+- Dados de perfis de terceiros e sugestão de perfis: a API oficial não entrega.
 - Envio de vídeo em servidor na Vercel.
-- Texto por IA só com `ANTHROPIC_API_KEY` (paga por uso). Sem ela, os textos saem de modelos fixos e se repetem.
+- Comparação visual com o app de referência: faltam capturas das telas dele.
+- Sem IA, os textos saem de modelos fixos.
 
 ## Documentos do projeto
 
-Em `replica/`: `recon.md`, `architecture.md`, `features.csv`, `parity.md`, `test-plan.md`, `bugs.md`, `fixes.md`, `brand.md`, `launch/launch-plan.md`, `deploy.md`.
+Em `replica/`: `recon.md`, `architecture.md`, `features.csv`, `parity.md`, `test-plan.md`, `bugs.md`, `fixes.md`, `brand.md`, `launch/launch-plan.md`, `deploy.md`, `guia-gratis.md`.

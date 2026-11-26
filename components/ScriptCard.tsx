@@ -22,7 +22,7 @@ export function ScriptCard({ s, onChange, onToast }: { s: any; onChange: () => v
   return (
     <div className="card" style={{ marginBottom: 12 }}>
       <div className="row between wrap">
-        <div className="row"><span className="tag">{TYPE_NAME[s.type] ?? s.type}</span><span className="tag">{s.dest === "reel" ? "Reel" : "Criativo"} · {s.seconds}s</span>{s.recorded && <span className="tag green">Gravado</span>}</div>
+        <div className="row"><span className="tag">{TYPE_NAME[s.type] ?? s.type}</span><span className="tag">{s.dest === "reel" ? "Reel" : "Criativo"} · {s.seconds}s</span>{s.recorded && <span className="tag green">Gravado</span>}{s.generator && <span className="tag" title={s.generator === "ia" ? "Escrito pela IA configurada" : "Montado por modelo local, sem IA"}>{s.generator === "ia" ? "IA" : "modelo"}</span>}</div>
         <div className="row wrap">
           <button className="btn sm" onClick={() => setOpen(!open)}>{open ? "Fechar" : "Abrir"}</button>
           <button className="btn sm" onClick={() => { setD(s); setEdit(true); setOpen(true); }}>Editar</button>

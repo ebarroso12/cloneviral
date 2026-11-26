@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { publishDue } from "@/lib/publish";
 
-// ESQUELETO: a publicação automática de agendamentos ainda não está implementada.
-// Exigiria app Meta aprovado (instagram_content_publish), vídeo em URL pública e um agendador chamando esta rota.
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
+// Para quem agenda de fora (servidor). No computador, o agendador interno já chama publishDue.
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET || req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) return NextResponse.json({ error: "não autorizado" }, { status: 401 });
-  return NextResponse.json({ today: new Date().toISOString().slice(0, 10), published: 0, note: "Não implementado." }, { status: 501 });
+  return NextResponse.json({ results: await publishDue() });
 }
