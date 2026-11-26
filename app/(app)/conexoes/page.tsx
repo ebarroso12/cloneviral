@@ -9,5 +9,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const s = getStore();
   const [conn] = await s.list("ig_connection", u.id);
   const [ads] = await s.list("ads_connection", u.id);
-  return <ConexoesView conn={conn ? JSON.parse(JSON.stringify({ ...conn, token: undefined })) : null} ads={ads ?? null} meta={metaConfigured()} flash={sp} />;
+  const [pending] = await s.list("ig_pending", u.id);
+  const choices = pending && sp.escolher ? JSON.parse(JSON.stringify(pending.accounts)) : null;
+  return <ConexoesView choices={choices} conn={conn ? JSON.parse(JSON.stringify({ ...conn, token: undefined })) : null} ads={ads ?? null} meta={metaConfigured()} flash={sp} />;
 }

@@ -7,7 +7,7 @@ Os dois passos são feitos por você, porque exigem a sua conta e a sua senha. O
 Antes: a conta do Instagram precisa ser **profissional** (Comercial ou Criador) e estar ligada a uma **Página do Facebook** que você administra.
 
 1. Entre em developers.facebook.com com o seu Facebook e crie um app.
-2. Adicione o produto **Facebook Login** (para empresas).
+2. Adicione o produto **Login do Facebook para Empresas**; a publicação de Reels por envio direto exige esse produto. Dentro dele, crie uma **configuração** com as permissões listadas abaixo e copie o **ID da configuração** para `META_CONFIG_ID` (passo 5). Se o seu app só oferecer o Login do Facebook comum, deixe `META_CONFIG_ID` em branco.
 3. Deixe o app em **modo de desenvolvimento**. Para a sua própria conta não é preciso enviar para análise; nesse modo a Meta aceita o retorno para `localhost`. Se pedir o endereço de retorno, use `http://localhost:3000/api/ig/callback`.
 4. Em configurações básicas, copie o **ID do app** e a **chave secreta**.
 5. Abra o arquivo `.env.local` na pasta do app com o Bloco de Notas e acrescente, sem apagar a linha `RV_SECRET`:
@@ -15,6 +15,7 @@ Antes: a conta do Instagram precisa ser **profissional** (Comercial ou Criador) 
 ```
 META_APP_ID=cole-aqui
 META_APP_SECRET=cole-aqui
+META_CONFIG_ID=cole-aqui
 ```
 
 6. Feche e abra o app. Vá em **Conexões** e clique em **Conectar Instagram**.

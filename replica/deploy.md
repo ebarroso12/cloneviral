@@ -6,7 +6,7 @@ Data: 26/11/2026. Autorização do dono para publicar: **ainda não pedida**. Na
 
 | item | situação |
 | --- | --- |
-| testes de unidade | 47 de 47 |
+| testes de unidade | 64 de 64 |
 | fluxos no navegador | 35 de 35 |
 | build de produção | passa (Next 15.5.29) |
 | auditoria de dependências (`npm audit`) | 0 vulnerabilidades |

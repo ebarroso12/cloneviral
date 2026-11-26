@@ -44,7 +44,7 @@ Escrito conforme a documentação oficial e testado apenas com a Meta **simulada
 
 Nada aqui cobra: dados no seu computador, textos por modelo local, publicação pela API oficial da Meta e, se você quiser, IA no plano gratuito. Passo a passo em [`replica/guia-gratis.md`](replica/guia-gratis.md).
 
-Com o atalho aberto, o app publica o que você agendou, coleta os números uma vez por dia e guarda 14 cópias diárias em `data/backups/`.
+Se abrir o atalho de novo com o app ligado, ele só abre o navegador. Com o atalho aberto, o app publica o que você agendou, coleta os números uma vez por dia e guarda 14 cópias diárias em `data/backups/`.
 
 ## O que não está pronto
 

@@ -313,6 +313,7 @@ def planejar(page):
     page.get_by_role("link", name="Ver o roteiro").first.wait_for()
     ir(page, "planejador-editorial")
     page.locator(".cal button.today").click()
+    page.locator("#h").fill("23:59")
     page.locator("#c").fill("legenda do dia")
     page.get_by_role("button", name="Agendar").click()
     page.get_by_text("Post agendado.").wait_for()

@@ -27,6 +27,17 @@ Só entra aqui o que foi reproduzido (teste que falhou antes da correção). S1 
 | BUG-021 | S1 | Next 15.1.6 e React 19.0.0 com vulnerabilidades críticas, entre elas execução remota de código | `npm audit` | corrigido: Next 15.5.29, 0 vulnerabilidades |
 | BUG-022 | S1 | uma chave paga de IA presente no ambiente do computador seria usada sem aviso | teste BUG-022 (função nova; comportamento confirmado na leitura) | corrigido: só com `RV_ALLOW_PAID_AI=1` |
 | BUG-023 | S2 | conta recém-criada, sem persona, quebrava ao criar roteiro sem tema | teste: `s is not iterable` | corrigido |
+| BUG-024 | S1 | clique duplo em Agendar criava dois posts automáticos, e o formulário mantinha vídeo e publicação automática para o próximo | teste REV-1 | corrigido |
+| BUG-025 | S1 | publicação automática marcada em horário passado saía no minuto seguinte | teste REV-2 | corrigido: recusa; a API genérica não cria agendamento |
+| BUG-026 | S1 | post apagado ou adiado durante o envio de outro era publicado assim mesmo | teste REV-3 | corrigido |
+| BUG-027 | S1 | resposta perdida da Meta virava "falhou", convidando a publicar em dobro | teste REV-4 | corrigido: confere o contêiner ou marca "conferir" |
+| BUG-028 | S1 | com duas Páginas ligava a primeira; trocar de conta misturava históricos e mantinha agendados | teste REV-5 | corrigido: escolha, confirmação e cópia do histórico |
+| BUG-029 | S2 | primeira coleta inventava 30 dias de seguidores iguais aos de hoje | teste REV-6 | corrigido |
+| BUG-030 | S2 | coleta com erro repetia a cada minuto, sem aviso na tela, e podia rodar duas vezes juntas | teste REV-7 | corrigido |
+| BUG-031 | S1 | falha ao gravar o banco local se perdia; cópia ilegível podia empurrar as boas para fora | teste REV-8 | corrigido |
+| BUG-032 | S2 | Login do Facebook para Empresas (config_id) não era suportado e permissões faltando não eram avisadas | teste REV-9 | corrigido conforme a documentação, sem teste real |
+| BUG-033 | S3 | post sem métrica na Meta era pedido para sempre, atrasando os outros | teste REV-10 | corrigido |
+| BUG-034 | S3 | abrir o atalho duas vezes terminava em erro de porta ocupada | teste "Atalho aberto duas vezes" | corrigido |
 
 Também ajustado sem teste que o reproduzisse: a versão padrão da API da Meta passou de v21.0 para v27.0, a dos exemplos atuais da documentação.
 
@@ -38,3 +49,5 @@ Também ajustado sem teste que o reproduzisse: a versão padrão da API da Meta 
 - Busca de notícias contra o feed real.
 - Alcance do dia atual pode vir com a data deslocada, conforme o `end_time` da Meta.
 - Qualidade dos textos sem IA: frases repetidas entre slides.
+
+BUG-024 a BUG-033 vieram de uma revisão independente do código.

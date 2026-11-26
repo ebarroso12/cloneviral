@@ -44,6 +44,9 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 ## Regras que o código já garante (não desfazer)
 
 - Regra do dono: **nenhum gasto**. Não ligar serviço pago; `aiProvider` só usa a Anthropic com `RV_ALLOW_PAID_AI=1`.
+- Agendamento só nasce em `schedulePost` (`/api/schedule`); `scheduled_posts` na API genérica é leitura e exclusão.
+- Conta do Instagram só é gravada por `saveConnection` (não mistura contas; troca pede confirmação e guarda cópia).
+- Resultado de publicação incerto vira `conferir`, nunca `falhou`. Dia sem medição de seguidores não recebe número.
 - Publicação (`lib/publish.ts`) é ação para fora: só com `autoPublish` marcado pelo dono, uma rodada por vez, sem repetir falha e sem publicar com mais de 6 horas de atraso.
 
 - Chave fixa (`conn`, `aud`, `snap_<data>`, id de post da Meta) vira `scopedId(userId, chave)`. `insert` recusa id de outra conta.

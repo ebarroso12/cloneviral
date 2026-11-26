@@ -16,7 +16,7 @@ export type Post = {
   saves: number;
   shares: number;
 };
-export type Snap = { date: string; followers: number; following: number; mediaCount: number; reach: number };
+export type Snap = { date: string; followers?: number; following?: number; mediaCount?: number; reach: number };
 export type Audience = {
   classifiedTotal: number;
   age: Record<string, number>;
@@ -45,7 +45,8 @@ export type ActionTip = { key: "alcance" | "engajamento" | "conversa"; points: n
 
 export function computeMetrics(posts: Post[], snaps: Snap[], audience: Audience | null, period: Period, opts: { adViews?: number | null } = {}) {
   const sorted = [...snaps].sort((a, b) => a.date.localeCompare(b.date));
-  const last = sorted[sorted.length - 1];
+  const measured = sorted.filter((s) => typeof s.followers === "number"); // dias antigos podem ter só o alcance
+  const last = measured[measured.length - 1];
   const followers = last?.followers ?? 0;
   const n = posts.length;
 
@@ -100,20 +101,28 @@ export function computeMetrics(posts: Post[], snaps: Snap[], audience: Audience 
   const bandStatus: "abaixo" | "dentro" | "acima" = engagementReal < band[0] ? "abaixo" : engagementReal > band[1] ? "acima" : "dentro";
 
   // ---- séries e crescimento por período ----
-  const lastDate = last?.date ?? "";
+  const lastDate = sorted[sorted.length - 1]?.date ?? "";
   const back = (days: number) => (lastDate ? addDays(lastDate, -days) : "");
   // seguidores na coleta mais recente até a data; antes da primeira coleta, vale a primeira
-  const followersAt = (date: string) => ([...sorted].reverse().find((s) => s.date <= date) ?? sorted[0])?.followers ?? 0;
+  const followersAt = (date: string) => ([...measured].reverse().find((s) => s.date <= date) ?? measured[0])?.followers ?? 0;
   const growth =
     period === "ontem" ? followersAt(back(1)) - followersAt(back(2)) : followersAt(lastDate) - followersAt(back(period === "hoje" ? 1 : period === "7d" ? 7 : 30));
   const seriesDays = period === "30d" ? 30 : 7;
-  const window = sorted.filter((s) => s.date >= back(seriesDays));
-  const followersSeries = window.map((s) => ({ date: s.date, value: s.followers }));
-  const reachSeries = window.map((s) => ({ date: s.date, value: s.reach }));
-  const firstExpected = sorted[0] && sorted[0].date > back(seriesDays) ? sorted[0].date : back(seriesDays);
-  const expectedDays = lastDate ? daysBetween(firstExpected, lastDate) + 1 : 0;
-  const periodLabel = `últimos ${Math.max(1, expectedDays - 1)} dias`;
-  const allMeasured = window.length >= 2 && window.length === expectedDays;
+  const windowOf = (list: Snap[]) => {
+    const rows = list.filter((s) => s.date >= back(seriesDays));
+    const from = list[0] && list[0].date > back(seriesDays) ? list[0].date : back(seriesDays);
+    // a cobertura é contada desde a primeira coleta de qualquer tipo, para o buraco aparecer
+    const start = sorted[0] && sorted[0].date > back(seriesDays) ? sorted[0].date : back(seriesDays);
+    const expected = lastDate ? daysBetween(start, lastDate) + 1 : 0;
+    return { rows, expected, days: lastDate ? daysBetween(from, lastDate) : 0, all: rows.length >= 2 && rows.length === expected };
+  };
+  const f = windowOf(measured);
+  const r = windowOf(sorted);
+  const followersSeries = f.rows.map((s) => ({ date: s.date, value: s.followers! }));
+  const reachSeries = r.rows.map((s) => ({ date: s.date, value: s.reach }));
+  const expectedDays = r.expected;
+  const periodLabel = `últimos ${Math.max(1, f.days)} dias`;
+  const allMeasured = f.all;
 
   // ---- por formato ----
   const byType = (["IMAGE", "VIDEO", "CAROUSEL_ALBUM"] as PostType[]).map((t) => {
@@ -147,7 +156,7 @@ export function computeMetrics(posts: Post[], snaps: Snap[], audience: Audience 
     profile: { followers, following: last?.following ?? 0, mediaCount: last?.mediaCount ?? n, lastSnapshot: last?.date ?? null },
     views: { organic: totalViews, ads: opts.adViews ?? null, total: totalViews + (opts.adViews ?? 0) },
     growth: { period, delta: growth, label: periodLabel, series: followersSeries, allMeasured, expectedDays },
-    reachDaily: { series: reachSeries, allMeasured },
+    reachDaily: { series: reachSeries, allMeasured: r.all, label: `últimos ${Math.max(1, r.days)} dias` },
     engagement: {
       postsMeasured: n,
       real: round(engagementReal, 2),

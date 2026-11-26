@@ -41,7 +41,7 @@ export default function MetricasView() {
         desc="O período vale para Crescimento de seguidores e Alcance diário. O resto desta tela não muda quando você troca de período: são os números da última coleta."
       />
       {!c || c.status !== "connected" ? (
-        <div className="card empty">Conecte o seu Instagram para ver as métricas. <Link href="/conexoes">Ir para Conexões</Link></div>
+        <div className="card empty">{c?.status === "reautorizar" ? "A autorização do Instagram venceu; os números abaixo são da última coleta. " : "Conecte o seu Instagram para ver as métricas. "}<Link href="/conexoes">Ir para Conexões</Link></div>
       ) : (
         <div className="card" style={{ display: "flex", gap: 18, alignItems: "flex-start", flexWrap: "wrap" }}>
           {c.picture ? <img className="avatar" src={c.picture} alt={`Foto de perfil de ${c.name}`} width={76} height={76} style={{ width: 76, height: 76, objectFit: "cover" }} /> : <div className="avatar" style={{ width: 76, height: 76, fontSize: 28 }} aria-hidden>{(c.name || "?").charAt(0)}</div>}
@@ -88,7 +88,7 @@ export default function MetricasView() {
         <div className="card">
           <h3>Alcance diário</h3>
           <div className="muted small">contas alcançadas por dia</div>
-          <div className="muted small">{m.growth.label}</div>
+          <div className="muted small">{m.reachDaily.label}</div>
           <Sparkline color="#8b5cf6" data={m.reachDaily.series} label={`alcance de ${m.reachDaily.series[0] ? fmtShort(m.reachDaily.series[0].date) : ""} a ${m.reachDaily.series.at(-1) ? fmtShort(m.reachDaily.series.at(-1).date) : ""}, de ${fmtInt(m.reachDaily.series[0]?.value ?? 0)} a ${fmtInt(m.reachDaily.series.at(-1)?.value ?? 0)}. ${m.reachDaily.allMeasured ? "todos os dias do período foram medidos." : "alguns dias não foram medidos."}`} />
           <div className="row between tiny muted"><span>{m.reachDaily.series[0] && fmtShort(m.reachDaily.series[0].date)}</span><span>{m.reachDaily.series.at(-1) && fmtShort(m.reachDaily.series.at(-1).date)}</span></div>
         </div>

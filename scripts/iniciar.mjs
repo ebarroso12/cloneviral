@@ -3,6 +3,8 @@ import { spawn, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { backupDb } from "./backup.mjs";
+import { portState } from "./porta.mjs";
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..").replace(/%20/g, " ");
 process.chdir(root);
@@ -10,6 +12,19 @@ const next = path.join(root, "node_modules", "next", "dist", "bin", "next");
 const port = process.env.PORT || "3000";
 const env = { ...process.env, NEXT_TELEMETRY_DISABLED: "1" };
 
+const abrir = () => { if (!process.env.RV_NO_BROWSER && process.platform === "win32") spawn("cmd", ["/c", "start", "", `http://localhost:${port}`], { detached: true, stdio: "ignore" }).unref(); };
+const estado = await portState(Number(port));
+// no Windows, sair logo após a consulta de rede derruba o Node com "Assertion failed"; um instante resolve
+const sair = async (codigo) => { await new Promise((r) => setTimeout(r, 500)); process.exit(codigo); };
+if (estado === "nosso") {
+  console.log(`O app já está aberto em http://localhost:${port}. Use aquela janela.`);
+  abrir();
+  await sair(0);
+}
+if (estado === "ocupada") {
+  console.error(`Outro programa está usando a porta ${port}. Feche-o e abra o app de novo (o login do Instagram depende dessa porta).`);
+  await sair(1);
+}
 if (!fs.existsSync(next)) {
   console.error("Faltam as dependências. Rode uma vez: npm ci");
   process.exit(1);
@@ -32,19 +47,19 @@ if (construir) {
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 console.log(`\nApp em http://localhost:${port}  (feche esta janela para encerrar)\n`);
-// cópia diária dos dados, guardando as 14 mais recentes
+// cópia diária dos dados, na abertura e enquanto a janela ficar aberta
 const dados = process.env.RV_DATA_DIR || "data";
-const db = path.join(dados, "db.json");
-if (fs.existsSync(db)) {
-  const dir = path.join(dados, "backups");
-  fs.mkdirSync(dir, { recursive: true });
-  const copia = path.join(dir, `db-${new Date().toISOString().slice(0, 10)}.json`);
-  if (!fs.existsSync(copia)) fs.copyFileSync(db, copia);
-  const antigas = fs.readdirSync(dir).filter((f) => /^db-\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().slice(0, -14);
-  for (const f of antigas) fs.rmSync(path.join(dir, f));
-}
+const copiar = () => {
+  try {
+    if (backupDb(dados) === "invalido") console.error(`ATENÇÃO: ${path.join(dados, "db.json")} está ilegível. As cópias boas estão em ${path.join(dados, "backups")}.`);
+  } catch (e) {
+    console.error("não consegui fazer a cópia dos dados:", e.message);
+  }
+};
+copiar();
+setInterval(copiar, 6 * 3600_000).unref();
 env.RV_SCHEDULER = "1"; // publica o agendado e coleta os números enquanto o app estiver aberto
 // só no próprio computador: não fica visível para outros aparelhos da rede
 const server = spawn(process.execPath, [next, "start", "-H", "127.0.0.1", "-p", port], { stdio: "inherit", env });
 server.on("exit", (c) => process.exit(c ?? 0));
-if (!process.env.RV_NO_BROWSER && process.platform === "win32") setTimeout(() => spawn("cmd", ["/c", "start", "", `http://localhost:${port}`], { detached: true, stdio: "ignore" }).unref(), 4000);
+setTimeout(abrir, 4000);

@@ -16,6 +16,7 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
   const [f, setF] = useState<any>({ time: "18:00", caption: "", videoId: "", scriptId: "", kind: "viral", autoPublish: false });
   const [lineS, setLineS] = useState(line);
   const [up, setUp] = useState(false);
+  const [saving, setSaving] = useState(false);
   const todayIso = iso(new Date());
   const cells = useMemo(() => { const first = ref.getDay(); const n = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate(); return [...Array(first).fill(null), ...Array.from({ length: n }, (_, i) => new Date(ref.getFullYear(), ref.getMonth(), i + 1))]; }, [ref]);
   const monthPosts = posts.filter((p: any) => p.date.startsWith(iso(ref).slice(0, 7)));
@@ -33,8 +34,16 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
     } catch (e: any) { toast(e.message, "err"); } finally { setUp(false); }
   };
   const schedule = async () => {
-    if (!day) return;
-    try { await api("/api/c/scheduled_posts", { body: { date: day, time: f.time, caption: f.caption, videoId: f.videoId || null, scriptId: f.scriptId || null, kind: f.kind, status: "agendado", autoPublish: real && !!f.videoId && f.autoPublish } }); toast("Post agendado."); setDay(null); setF({ ...f, caption: "" }); r.refresh(); } catch (e: any) { toast(e.message, "err"); }
+    if (!day || saving) return;
+    setSaving(true);
+    try {
+      await api("/api/schedule", { body: { date: day, time: f.time, caption: f.caption, videoId: f.videoId || null, scriptId: f.scriptId || null, kind: f.kind, autoPublish: real && !!f.videoId && f.autoPublish } });
+      toast("Post agendado.");
+      setDay(null);
+      // o próximo agendamento começa limpo: vídeo e publicação automática não se repetem sozinhos
+      setF({ ...f, caption: "", videoId: "", scriptId: "", autoPublish: false });
+      r.refresh();
+    } catch (e: any) { toast(e.message, "err"); } finally { setSaving(false); }
   };
   const del = async (id: string) => { await api(`/api/c/scheduled_posts?id=${id}`, { method: "DELETE" }); r.refresh(); };
   const inDay = day ? posts.filter((p: any) => p.date === day) : [];
@@ -81,7 +90,7 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
           <div className="field"><label htmlFor="c">Legenda</label><textarea id="c" value={f.caption} onChange={(e) => setF({ ...f, caption: e.target.value })} /></div>
           <label className="row small" style={{ marginBottom: 12 }}><input type="checkbox" style={{ width: "auto" }} checked={real && !!f.videoId && f.autoPublish} disabled={!real || !f.videoId} onChange={(e) => setF({ ...f, autoPublish: e.target.checked })} /> Publicar sozinho no Instagram neste horário</label>
           <p className="tiny muted">{!real ? "Disponível depois de conectar a sua conta real em Conexões." : !f.videoId ? "Escolha um vídeo para liberar a publicação automática." : "O app precisa estar aberto no horário. Com mais de 6 horas de atraso ele não publica e avisa."}</p>
-          <button className="btn primary" onClick={schedule}>Agendar</button>
+          <button className="btn primary" onClick={schedule} disabled={saving}>{saving ? "Agendando..." : "Agendar"}</button>
         </Modal>
       )}
       {node}

@@ -2,11 +2,14 @@
 // de endereço público nem de serviço pago. Documentação: IG User Media e Content Publishing, da Meta.
 import fs from "node:fs";
 import { getStore, type Doc } from "./store";
-import { decrypt, GRAPH, gj } from "./instagram";
+import { decrypt, GRAPH, gj, MetaError } from "./instagram";
 import { videoPath } from "./videos";
 
 const LATE_LIMIT = 6 * 3600_000; // passou disso, não publica de surpresa: o dono decide
 const STUCK_LIMIT = 30 * 60_000;
+
+/** O pedido de publicação saiu, mas não dá para saber o resultado: nunca tratar como falha. */
+export class PublishUncertain extends Error {}
 
 export async function publishReel(conn: Record<string, any>, file: string, caption: string, opts: { pollMs?: number; maxPolls?: number } = {}) {
   const userToken = decrypt(conn.token);
@@ -32,8 +35,16 @@ export async function publishReel(conn: Record<string, any>, file: string, capti
     if (i >= (opts.maxPolls ?? 20)) throw new Error("A Meta demorou demais para processar o vídeo. Confira no Instagram antes de tentar de novo.");
     await new Promise((r) => setTimeout(r, wait));
   }
-  const done = await gj(`${GRAPH}/${conn.igId}/media_publish`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ creation_id: created.id }) });
-  return String(done.id);
+  try {
+    const done = await gj(`${GRAPH}/${conn.igId}/media_publish`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ creation_id: created.id }), timeoutMs: 120_000 });
+    return String(done.id);
+  } catch (e) {
+    // recusa clara da Meta é falha; queda, demora ou erro do lado dela deixa o resultado em aberto
+    if (e instanceof MetaError && e.status < 500) throw e;
+    const check = await gj(`${GRAPH}/${created.id}?fields=status_code&access_token=${token}`).catch(() => null);
+    if (check?.status_code === "PUBLISHED") return "";
+    throw new PublishUncertain("Não recebi a confirmação da Meta. Confira no Instagram antes de agendar de novo.");
+  }
 }
 
 type Result = { id: string; status: string; error?: string };
@@ -53,12 +64,16 @@ async function run(now: Date, opts: { pollMs?: number }) {
     await store.update("scheduled_posts", p.id, p.userId, { status, ...extra });
     results.push({ id: p.id, status, error: extra.error });
   };
-  for (const p of posts) {
+  for (const listed of posts) {
+    // relê na hora: o envio anterior pode ter levado minutos, e o post pode ter sido apagado ou adiado
+    const p = await store.get("scheduled_posts", listed.id);
+    if (!p || p.autoPublish !== true) continue;
     if (p.status === "publicando") {
       // o app fechou no meio: não dá para saber se saiu, então não repete
       if (now.getTime() - Date.parse(p.startedAt) > STUCK_LIMIT) await set(p, "conferir", { error: "O app fechou durante a publicação. Confira no Instagram." });
       continue;
     }
+    if (p.status !== "agendado") continue;
     const due = new Date(`${p.date}T${p.time}:00`).getTime(); // horário do computador
     if (!Number.isFinite(due)) { await set(p, "falhou", { error: "Data ou horário inválido." }); continue; }
     if (due > now.getTime()) continue;
@@ -74,7 +89,7 @@ async function run(now: Date, opts: { pollMs?: number }) {
       const mediaId = await publishReel(conn, file, String(p.caption ?? "").slice(0, 2200), opts);
       await set(p, "publicado", { mediaId, publishedAt: new Date().toISOString(), error: null });
     } catch (e: any) {
-      await set(p, "falhou", { error: String(e?.message ?? e).slice(0, 300) });
+      await set(p, e instanceof PublishUncertain ? "conferir" : "falhou", { error: String(e?.message ?? e).slice(0, 300) });
     }
   }
   return results;

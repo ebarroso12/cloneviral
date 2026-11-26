@@ -1,6 +1,6 @@
 // Agendador do uso local: enquanto o app está aberto, publica o que venceu e coleta os números uma vez por dia.
 import { publishDue } from "./publish";
-import { syncAccount } from "./instagram";
+import { syncAccount, syncDue } from "./instagram";
 import { getStore } from "./store";
 
 const g = globalThis as unknown as { __scheduler?: NodeJS.Timeout; __syncing?: boolean };
@@ -11,9 +11,8 @@ async function dailySync() {
   try {
     const conns = await getStore().findAll("ig_connection", (c) => !c.demo && c.status === "connected");
     for (const c of conns) {
-      const age = Date.now() - Date.parse(c.lastSync ?? "1970-01-01");
-      // coleta incompleta continua logo; completa, só no dia seguinte
-      if (age > (c.syncPartial ? 10 * 60_000 : 20 * 3600_000)) await syncAccount(c.userId, { deadlineMs: 120_000 });
+      // o erro fica gravado na conexão; uma conta com problema não impede as outras
+      if (syncDue(c)) await syncAccount(c.userId, { deadlineMs: 120_000 }).catch((e) => console.error("coleta:", e.message));
     }
   } finally {
     g.__syncing = false;

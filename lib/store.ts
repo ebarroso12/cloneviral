@@ -58,22 +58,35 @@ export class FileStore implements Store {
     this.loaded = true;
   }
   private timer: NodeJS.Timeout | null = null;
-  private save() {
+  private save(delay = 150) {
     // debounce: grava em lote (posts são milhares) e de forma atômica
     if (this.timer) return;
     this.timer = setTimeout(() => {
       this.timer = null;
-      const tmp = this.file + ".tmp";
-      fs.writeFileSync(tmp, JSON.stringify(this.db));
-      fs.renameSync(tmp, this.file);
-    }, 150);
+      try {
+        this.write();
+      } catch (e: any) {
+        // antivírus ou sincronizador pode travar o arquivo no Windows: os dados seguem na memória
+        console.error(`não gravei ${this.file} (${e.message}); tento de novo`);
+        this.save(1000);
+      }
+    }, delay);
+  }
+  private write() {
+    const tmp = this.file + ".tmp";
+    const fd = fs.openSync(tmp, "w");
+    try {
+      fs.writeFileSync(fd, JSON.stringify(this.db));
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    fs.renameSync(tmp, this.file);
   }
   flush() {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
-    const tmp = this.file + ".tmp";
-    fs.writeFileSync(tmp, JSON.stringify(this.db));
-    fs.renameSync(tmp, this.file);
+    this.write();
   }
   private col(c: string) {
     this.load();

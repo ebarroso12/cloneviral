@@ -1,6 +1,6 @@
 import { route, bad } from "@/lib/api";
 import { getStore, clientData, publicDoc } from "@/lib/store";
-import { WRITABLE, READONLY, SINGLETON } from "@/lib/collections";
+import { WRITABLE, READONLY, SINGLETON, DELETABLE } from "@/lib/collections";
 
 // CRUD genérico, sempre escopado ao usuário logado. Só coleções da lista.
 type Ctx = { params: Promise<{ collection: string }> };
@@ -31,7 +31,7 @@ export const PATCH = wrap(async (c, user, req) => {
   return r;
 });
 export const DELETE = wrap(async (c, user, req) => {
-  if (!WRITABLE.has(c)) bad("Coleção desconhecida.", 404);
+  if (!DELETABLE.has(c)) bad("Coleção desconhecida.", 404);
   const id = new URL(req.url).searchParams.get("id");
   if (!id) bad("Informe o id.");
   const ok = await getStore().remove(c, id!, user.id);

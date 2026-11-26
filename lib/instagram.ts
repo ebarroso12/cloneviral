@@ -27,16 +27,26 @@ export function decrypt(payload: string) {
   return Buffer.concat([d.update(enc), d.final()]).toString("utf8");
 }
 
+/** Resposta de erro da própria Meta (diferente de queda de rede ou resposta ilegível). */
+export class MetaError extends Error {
+  constructor(message: string, public status: number, public code?: number) {
+    super(message);
+  }
+}
+
 export async function gj(url: string, opts: { method?: string; headers?: Record<string, string>; body?: any; timeoutMs?: number } = {}) {
   const { timeoutMs = 20000, ...init } = opts;
   const r = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   const j = await r.json();
-  if (!r.ok || j.error) throw new Error(j.error?.message || `Graph ${r.status}`);
+  if (!r.ok || j.error) throw new MetaError(j.error?.message || `Graph ${r.status}`, r.status, j.error?.code);
   return j;
 }
 
 export function authUrl(redirect: string, state: string) {
-  const q = new URLSearchParams({ client_id: process.env.META_APP_ID!, redirect_uri: redirect, state, scope: SCOPES.join(","), response_type: "code" });
+  const q = new URLSearchParams({ client_id: process.env.META_APP_ID!, redirect_uri: redirect, state, response_type: "code" });
+  // o Login do Facebook para Empresas define as permissões numa configuração salva (config_id)
+  if (process.env.META_CONFIG_ID) q.set("config_id", process.env.META_CONFIG_ID);
+  else q.set("scope", SCOPES.join(","));
   return `https://www.facebook.com/${V}/dialog/oauth?${q}`;
 }
 
@@ -48,11 +58,27 @@ export async function exchangeCode(code: string, redirect: string) {
   return { token: long.access_token as string, expiresIn: (long.expires_in as number) ?? 60 * 86400 };
 }
 
-export async function findInstagramAccount(token: string) {
-  const pages = await gj(`${G}/me/accounts?fields=id,name,instagram_business_account{id,username}&access_token=${token}`);
-  const p = (pages.data as any[]).find((x) => x.instagram_business_account);
-  if (!p) throw new Error("Nenhuma conta profissional do Instagram ligada a uma Página do Facebook foi encontrada.");
-  return { pageId: p.id as string, igId: p.instagram_business_account.id as string };
+export type IgAccount = { igId: string; pageId: string; username: string };
+
+/** Todas as Páginas com conta profissional ligada, seguindo a paginação. */
+export async function listInstagramAccounts(token: string): Promise<IgAccount[]> {
+  const out: IgAccount[] = [];
+  let url: string | null = `${G}/me/accounts?fields=id,name,instagram_business_account{id,username}&limit=100&access_token=${token}`;
+  for (let i = 0; url && i < 10; i++) {
+    const j: any = await gj(url);
+    for (const p of j.data ?? []) if (p.instagram_business_account) out.push({ igId: p.instagram_business_account.id, pageId: p.id, username: p.instagram_business_account.username ?? p.name ?? p.id });
+    url = j.paging?.next ?? null;
+  }
+  return out;
+}
+
+export const READ_PERMISSIONS = ["instagram_basic", "instagram_manage_insights", "pages_show_list"];
+const REQUIRED = [...READ_PERMISSIONS, "instagram_content_publish", "pages_read_engagement"];
+
+export async function missingPermissions(token: string) {
+  const j = await gj(`${G}/me/permissions?access_token=${token}`);
+  const granted = new Set((j.data ?? []).filter((p: any) => p.status === "granted").map((p: any) => p.permission));
+  return REQUIRED.filter((p) => !granted.has(p));
 }
 
 const DAY = 86400000;
@@ -64,11 +90,49 @@ const BATCH = 5;
  * falha, mas toda falha vira aviso. Métrica que não veio nunca é gravada como zero por cima da anterior.
  * Passado o prazo, para e devolve partial=true; a próxima chamada continua.
  */
-export async function syncAccount(userId: string, opts: { deadlineMs?: number } = {}) {
+export function syncAccount(userId: string, opts: { deadlineMs?: number } = {}) {
+  const running = (g.__syncs ||= new Map());
+  let p = running.get(userId) as ReturnType<typeof tracked> | undefined;
+  if (!p) {
+    p = tracked(userId, opts).finally(() => running.delete(userId));
+    running.set(userId, p);
+  }
+  return p;
+}
+const g = globalThis as unknown as { __syncs?: Map<string, Promise<unknown>> };
+
+/** Registra a tentativa e o erro, para o agendador recuar e a tela avisar. */
+async function tracked(userId: string, opts: { deadlineMs?: number }) {
+  const store = getStore();
+  const attempt = async (extra: Record<string, any>) => {
+    const [c] = await store.list("ig_connection", userId);
+    if (c && !c.demo) await store.update("ig_connection", c.id, userId, { lastSyncAttempt: new Date().toISOString(), ...extra });
+  };
+  try {
+    const r = await runSync(userId, opts);
+    await attempt({ syncError: null });
+    return r;
+  } catch (e: any) {
+    // 190 = chave de acesso vencida ou revogada: só uma nova autorização resolve
+    if (e instanceof MetaError && e.code === 190) await attempt({ status: "reautorizar", syncError: e.message });
+    else if (!/desconectado|autoriza/i.test(String(e?.message))) await attempt({ syncError: String(e?.message ?? e).slice(0, 200) });
+    throw e;
+  }
+}
+
+/** Está na hora de coletar sozinho? Completa: uma vez por dia. Incompleta: logo. Com erro: de hora em hora. */
+export function syncDue(c: Record<string, any>, now: number = Date.now()) {
+  if (c.demo || c.status !== "connected") return false;
+  const age = (iso?: string) => (iso ? now - Date.parse(iso) : Infinity);
+  if (c.syncError) return age(c.lastSyncAttempt) > 3600_000;
+  return age(c.lastSync) > (c.syncPartial ? 10 * 60_000 : 20 * 3600_000);
+}
+
+async function runSync(userId: string, opts: { deadlineMs?: number }) {
   const store = getStore();
   const conn = (await store.list("ig_connection", userId))[0];
   if (!conn || conn.demo) return { demo: true as const, partial: false, warnings: [] as string[] };
-  if (conn.status !== "connected" || !conn.token) throw new Error("O Instagram está desconectado. Conecte de novo em Conexões.");
+  if (conn.status !== "connected" || !conn.token) throw new Error(conn.status === "reautorizar" ? "A autorização do Instagram venceu. Refaça em Conexões." : "O Instagram está desconectado. Conecte de novo em Conexões.");
   const end = Date.now() + (opts.deadlineMs ?? 45000);
   const late = () => Date.now() >= end;
   const warnings = new Set<string>();
@@ -92,7 +156,8 @@ export async function syncAccount(userId: string, opts: { deadlineMs?: number } 
   for (const [date, reach] of reachByDay) {
     const cur = snaps.get(date);
     if (cur) await store.update("snapshots", cur.id, userId, { reach });
-    else if (date !== today) await store.insert("snapshots", userId, { date, ...base, reach }, scopedId(userId, `snap_${date}`));
+    // nos dias passados só o alcance é conhecido; seguidores daquele dia não são inventados
+    else if (date !== today) await store.insert("snapshots", userId, { date, reach }, scopedId(userId, `snap_${date}`));
   }
   const cur = snaps.get(today);
   const snap = { date: today, ...base, reach: reachByDay.get(today) ?? cur?.reach ?? 0 };
@@ -120,8 +185,8 @@ export async function syncAccount(userId: string, opts: { deadlineMs?: number } 
   const listIncomplete = !!url;
 
   // métricas por post: primeiro os nunca medidos, depois os recentes
-  const never = seen.filter((p) => !known.get(p.id)!.insightsAt);
-  const recent = seen.filter((p) => { const d = known.get(p.id)!; return d.insightsAt && Date.now() - Date.parse(d.publishedAt) < RECENT_DAYS * DAY; });
+  const never = seen.filter((p) => !known.get(p.id)!.insightsAt).sort((a, b) => (known.get(a.id)!.insightsAttempts ?? 0) - (known.get(b.id)!.insightsAttempts ?? 0));
+  const recent = seen.filter((p) => { const d = known.get(p.id)!; return d.insightsAt && !d.insightsUnavailable && Date.now() - Date.parse(d.publishedAt) < RECENT_DAYS * DAY; });
   const queue = [...never, ...recent];
   let done = 0;
   while (done < queue.length && !late()) {
@@ -136,7 +201,14 @@ export async function syncAccount(userId: string, opts: { deadlineMs?: number } 
         }
         await store.update("posts", p.id, userId, patch);
       } catch (e) {
+        if (e instanceof MetaError && e.code === 190) throw e;
         warn("Métricas de posts", e);
+        const d = known.get(p.id)!;
+        if (!d.insightsAt && e instanceof MetaError && e.status < 500) {
+          // há posts sem métrica na Meta (anteriores à conta profissional): depois de três recusas, deixa de pedir
+          const attempts = (d.insightsAttempts ?? 0) + 1;
+          await store.update("posts", p.id, userId, attempts >= 3 ? { insightsAttempts: attempts, insightsAt: new Date().toISOString(), insightsUnavailable: true } : { insightsAttempts: attempts });
+        }
       }
     }));
     done += BATCH;

@@ -32,7 +32,7 @@ test("faixa saudável: 21,63% está acima de 3% a 6%", () => {
   assert.equal(computeMetrics(posts, snaps, null, "30d").engagement.bandStatus, "acima");
 });
 test("crescimento por período", () => {
-  assert.equal(computeMetrics(posts, snaps, null, "hoje").growth.delta, 10993 - snaps[8].followers);
+  assert.equal(computeMetrics(posts, snaps, null, "hoje").growth.delta, 10993 - snaps[8].followers!);
   assert.equal(computeMetrics(posts, snaps, null, "30d").growth.delta, 10993 - 10966);
   assert.equal(computeMetrics(posts, snaps, null, "7d").growth.series.length, 8);
 });
