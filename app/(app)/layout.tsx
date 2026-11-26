@@ -1,3 +1,4 @@
+import { isOwner } from "@/lib/invites";
 import { requireUser } from "@/lib/auth";
 import { balance, ensureCycle, PLANS } from "@/lib/credits";
 import Shell from "@/components/Shell";
@@ -10,5 +11,5 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const credits = await balance(user.id);
   const plan = PLANS[user.plan] ?? PLANS.trial;
   const [conn] = await getStore().list("ig_connection", user.id);
-  return <Shell handle={conn?.igUsername} user={{ name: user.name, email: user.email }} credits={credits} planName={plan.name} total={plan.monthlyCredits}>{children}</Shell>;
+  return <Shell owner={await isOwner(user.id)} handle={conn?.igUsername} user={{ name: user.name, email: user.email }} credits={credits} planName={plan.name} total={plan.monthlyCredits}>{children}</Shell>;
 }

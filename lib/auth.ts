@@ -5,6 +5,7 @@ import { getStore, uid, type Doc } from "./store";
 import { ensureSeed, grantTrial } from "./seed";
 import { signupAllowed, demoEnabled } from "./config";
 import { hashPassword, verifyPassword } from "./password";
+import { claimInvite } from "./invites";
 
 const COOKIE = "rv_session";
 const SESSION_DAYS = 30;
@@ -17,9 +18,12 @@ export async function signup(name: string, email: string, password: string, code
   if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error("E-mail inválido.");
   if (password.length < 8) throw new Error("A senha precisa ter ao menos 8 caracteres.");
   const owner = await store.findOne("users", (u) => !u.demo);
-  if (!signupAllowed(process.env, !!owner, code)) throw new Error(!owner && process.env.RV_SIGNUP_CODE ? "Código de cadastro incorreto." : "O cadastro está fechado neste servidor.");
+  const open = signupAllowed(process.env, !!owner, code);
+  if (!open && !(owner && code.trim())) throw new Error(!owner && process.env.RV_SIGNUP_CODE ? "Código de cadastro incorreto." : "O cadastro está fechado neste servidor. Peça um convite ao dono.");
   const exists = await store.findOne("users", (u) => u.email === email);
   if (exists) throw new Error("Já existe uma conta com esse e-mail.");
+  // o convite só é gasto depois que o resto foi conferido
+  if (!open && !(await claimInvite(code))) throw new Error("Convite inválido, já usado ou vencido.");
   const id = uid();
   const trialEnds = new Date(Date.now() + 30 * 86400000).toISOString();
   await store.insert("users", id, { name: name.trim() || email.split("@")[0], email, password: hashPassword(password), plan: "trial", trialEndsAt: trialEnds }, id);

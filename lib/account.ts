@@ -9,7 +9,7 @@ export async function deleteAccount(userId: string, password: string) {
   const store = getStore();
   const user = await store.get("users", userId);
   if (!user || !verifyPassword(password, String(user.password))) throw new Error("Senha incorreta. Nada foi apagado.");
-  for (const c of [...WRITABLE, ...READONLY, "ledger", "sessions", "ig_pending"]) await store.removeAllForUser(c, userId);
+  for (const c of [...WRITABLE, ...READONLY, "ledger", "sessions", "ig_pending", "video_chunks", "invites", "meta_app"]) await store.removeAllForUser(c, userId);
   fs.rmSync(uploadDir(userId), { recursive: true, force: true });
   await store.removeAllForUser("users", userId);
 }

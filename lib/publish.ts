@@ -3,7 +3,8 @@
 import fs from "node:fs";
 import { getStore, type Doc } from "./store";
 import { decrypt, GRAPH, gj, MetaError } from "./instagram";
-import { videoPath } from "./videos";
+import { readVideo, freeVideo } from "./videos";
+import { dueTime } from "./due";
 
 const LATE_LIMIT = 6 * 3600_000; // passou disso, não publica de surpresa: o dono decide
 const STUCK_LIMIT = 30 * 60_000;
@@ -11,7 +12,7 @@ const STUCK_LIMIT = 30 * 60_000;
 /** O pedido de publicação saiu, mas não dá para saber o resultado: nunca tratar como falha. */
 export class PublishUncertain extends Error {}
 
-export async function publishReel(conn: Record<string, any>, file: string, caption: string, opts: { pollMs?: number; maxPolls?: number } = {}) {
+export async function publishReel(conn: Record<string, any>, file: string | Buffer, caption: string, opts: { pollMs?: number; maxPolls?: number } = {}) {
   const userToken = decrypt(conn.token);
   let token = userToken;
   try {
@@ -24,7 +25,7 @@ export async function publishReel(conn: Record<string, any>, file: string, capti
   const created = await gj(`${GRAPH}/${conn.igId}/media?${q}`, { method: "POST" });
   const target = new URL(String(created.uri));
   if (target.protocol !== "https:" || target.hostname !== "rupload.facebook.com") throw new Error("A Meta devolveu um endereço de envio inesperado.");
-  const bytes = fs.readFileSync(file);
+  const bytes = typeof file === "string" ? fs.readFileSync(file) : file;
   await gj(target.toString(), { method: "POST", headers: { Authorization: `OAuth ${token}`, offset: "0", file_size: String(bytes.length) }, body: bytes, timeoutMs: 600_000 });
 
   const wait = opts.pollMs ?? 15_000;
@@ -74,7 +75,7 @@ async function run(now: Date, opts: { pollMs?: number }) {
       continue;
     }
     if (p.status !== "agendado") continue;
-    const due = new Date(`${p.date}T${p.time}:00`).getTime(); // horário do computador
+    const due = dueTime(p as { date?: unknown; time?: unknown; tzOffset?: unknown });
     if (!Number.isFinite(due)) { await set(p, "falhou", { error: "Data ou horário inválido." }); continue; }
     if (due > now.getTime()) continue;
     if (now.getTime() - due > LATE_LIMIT) { await set(p, "atrasado", { error: "O app estava fechado no horário. Reagende para publicar." }); continue; }
@@ -84,10 +85,12 @@ async function run(now: Date, opts: { pollMs?: number }) {
       if (!conn || conn.demo || conn.status !== "connected") throw new Error("Não há conta real do Instagram conectada.");
       const video = p.videoId ? await store.get("videos", String(p.videoId)) : null;
       if (!video || video.userId !== p.userId) throw new Error("Escolha um vídeo enviado para publicar.");
-      const file = videoPath(p.userId, video as any);
-      if (!fs.existsSync(file)) throw new Error("O arquivo do vídeo não está mais no computador.");
-      const mediaId = await publishReel(conn, file, String(p.caption ?? "").slice(0, 2200), opts);
+      const bytes = await readVideo(p.userId, video);
+      const mediaId = await publishReel(conn, bytes, String(p.caption ?? "").slice(0, 2200), opts);
       await set(p, "publicado", { mediaId, publishedAt: new Date().toISOString(), error: null });
+      // no site, o vídeo publicado libera espaço se nenhum outro agendamento ainda depende dele
+      const pending = (await store.list("scheduled_posts", p.userId)).some((x) => x.videoId === video.id && x.autoPublish && x.status === "agendado");
+      if (!pending) await freeVideo(p.userId, video).catch((e) => console.error("liberar vídeo:", e.message));
     } catch (e: any) {
       await set(p, e instanceof PublishUncertain ? "conferir" : "falhou", { error: String(e?.message ?? e).slice(0, 300) });
     }

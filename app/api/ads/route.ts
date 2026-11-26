@@ -1,21 +1,17 @@
 import { route, bad } from "@/lib/api";
-import { getStore } from "@/lib/store";
-import { adsConnectionData } from "@/lib/ads";
+import { connectAds, disconnectAds } from "@/lib/ads";
+import { HttpError } from "@/lib/auth";
 
-// Anúncios Meta (somente leitura). Só a conta de demonstração tem total simulado; a leitura real exige ads_read (App Review).
+export const maxDuration = 60;
+
+// Anúncios Meta, somente leitura.
 export const POST = route(async (user, req) => {
   const { action } = await req.json();
-  const s = getStore();
-  const cur = (await s.list("ads_connection", user.id))[0];
-  let data: Record<string, any> = { status: "disconnected", views: 0 };
-  if (action === "connect") {
-    const conn = (await s.list("ig_connection", user.id))[0] as any;
-    const organic = (await s.list("posts", user.id)).reduce((a, p: any) => a + p.views, 0);
-    try {
-      data = adsConnectionData(conn, organic);
-    } catch (e: any) {
-      bad(e.message, 501);
-    }
+  if (action !== "connect") return disconnectAds(user.id);
+  try {
+    return await connectAds(user.id);
+  } catch (e: any) {
+    if (e instanceof HttpError) throw e;
+    bad(`A Meta não devolveu os anúncios: ${String(e.message).slice(0, 200)}`, 502);
   }
-  return cur ? s.update("ads_connection", cur.id, user.id, data) : s.insert("ads_connection", user.id, data);
 });

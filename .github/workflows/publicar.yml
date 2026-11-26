@@ -1,0 +1,21 @@
+# Gatilho gratuito da publicação agendada no site (o plano gratuito da Vercel só agenda uma vez por dia).
+name: Publicar agendados
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+concurrency:
+  group: publicar-agendados
+  cancel-in-progress: false
+permissions: {}
+jobs:
+  publicar:
+    if: github.repository == 'ebarroso12/cloneviral'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Chamar o site
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        # o resultado não é mostrado: o registro deste repositório é público
+        run: curl --fail --silent --show-error --max-time 320 -o /dev/null -H "Authorization: Bearer $CRON_SECRET" https://cloneviral-iota.vercel.app/api/cron/publish

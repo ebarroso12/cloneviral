@@ -183,9 +183,9 @@ export class SupabaseStore implements Store {
     return this.rowToDoc((await res.json())[0]);
   }
   async remove(c: string, id: string, userId: string) {
-    const res = await fetch(`${this.url}/rest/v1/app_docs?collection=eq.${q(c)}&id=eq.${q(id)}&user_id=eq.${q(userId)}`, { method: "DELETE", headers: this.h() });
+    const res = await fetch(`${this.url}/rest/v1/app_docs?collection=eq.${q(c)}&id=eq.${q(id)}&user_id=eq.${q(userId)}`, { method: "DELETE", headers: this.h({ Prefer: "return=representation" }) });
     if (!res.ok) throw new Error(`supabase delete ${res.status}`);
-    return true;
+    return (await res.json()).length > 0;
   }
   async removeAllForUser(c: string, userId: string) {
     const res = await fetch(`${this.url}/rest/v1/app_docs?collection=eq.${q(c)}&user_id=eq.${q(userId)}`, { method: "DELETE", headers: this.h() });

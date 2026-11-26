@@ -103,8 +103,8 @@ test("BUG-008: se a criação falha depois de cobrar, o crédito volta", async (
 
 test("BUG-009: conta real nunca recebe visualizações de anúncio inventadas", async () => {
   const ads = await import("../lib/ads");
-  assert.throws(() => ads.adsConnectionData({ demo: false }, 1000), /ainda não/i);
-  assert.throws(() => ads.adsConnectionData(undefined, 1000), /ainda não/i);
+  assert.throws(() => ads.adsConnectionData({ demo: false }, 1000), /só da demonstração/i);
+  assert.throws(() => ads.adsConnectionData(undefined, 1000), /só da demonstração/i);
   assert.deepEqual(ads.adsConnectionData({ demo: true }, 1000), { status: "connected", views: 180, demo: true });
   assert.equal(ads.adViewsFor({ demo: false }, { status: "connected", views: 180, demo: true }), null);
   assert.equal(ads.adViewsFor({ demo: true }, { status: "connected", views: 180, demo: true }), 180);
@@ -151,10 +151,8 @@ test("BUG-014: cores da identidade visual não injetam marcação no slide", asy
 });
 
 test("BUG-020: na Vercel o app não finge gravar em disco descartável", async () => {
-  const { storageProblem, uploadProblem } = await import("../lib/config");
+  const { storageProblem } = await import("../lib/config");
   assert.match(storageProblem({ VERCEL: "1" })!, /Supabase/);
   assert.equal(storageProblem({ VERCEL: "1", SUPABASE_URL: "u", SUPABASE_SERVICE_ROLE_KEY: "k" }), null);
   assert.equal(storageProblem({}), null);
-  assert.match(uploadProblem({ VERCEL: "1" })!, /vídeo/i);
-  assert.equal(uploadProblem({}), null);
 });

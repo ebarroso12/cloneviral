@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
-import { metaConfigured } from "@/lib/instagram";
+import { metaStatus } from "@/lib/metaApp";
+import { isOwner } from "@/lib/invites";
 import { avisoSemMeta } from "@/lib/config";
 import ConexoesView from "./view";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const [conn] = await s.list("ig_connection", u.id);
   const [ads] = await s.list("ads_connection", u.id);
   const [pending] = await s.list("ig_pending", u.id);
+  const app = await metaStatus();
+  const origin = process.env.APP_URL || (process.env.VERCEL ? "" : "http://localhost:3000");
   const choices = pending && sp.escolher ? JSON.parse(JSON.stringify(pending.accounts)) : null;
-  return <ConexoesView choices={choices} conn={conn ? JSON.parse(JSON.stringify({ ...conn, token: undefined })) : null} ads={ads ?? null} meta={metaConfigured()} aviso={avisoSemMeta({ demo: !!conn?.demo, site: !!process.env.VERCEL })} flash={sp} />;
+  return <ConexoesView choices={choices} conn={conn ? JSON.parse(JSON.stringify({ ...conn, token: undefined })) : null} ads={ads ?? null} meta={app.configured} app={(await isOwner(u.id)) && !app.fromServer ? { appId: app.appId, configId: app.configId, redirect: `${origin}/api/ig/callback` } : null} aviso={avisoSemMeta({ demo: !!conn?.demo, site: !!process.env.VERCEL })} flash={sp} />;
 }

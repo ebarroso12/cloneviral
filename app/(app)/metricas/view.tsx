@@ -69,7 +69,7 @@ export default function MetricasView() {
         <div className="card kpi">
           <div className="label">Visualizações <Tip label="Como eu chego neste número de visualizações">Orgânico é quanto as suas publicações foram vistas, e conta a vida inteira de cada uma, desde {m.posts ? fmtDate(posts[posts.length - 1]?.publishedAt ?? new Date().toISOString()) : "o começo"}.</Tip></div>
           <div className="value">{fmtCompact(m.views.total)}</div>
-          <div className="sub">{m.views.ads == null ? "soma das suas publicações · não inclui anúncio" : `publicações ${fmtCompact(m.views.organic)} · anúncios ${fmtCompact(m.views.ads)}`}</div>
+          <div className="sub">{m.views.ads == null ? "soma das suas publicações · não inclui anúncio" : `publicações ${fmtCompact(m.views.organic)} · impressões de anúncios ${fmtCompact(m.views.ads)}`}</div>
         </div>
         <div className="card kpi"><div className="label">Seguindo</div><div className="value">{fmtInt(m.profile.following)}</div></div>
         <div className="card kpi"><div className="label">Publicações</div><div className="value">{fmtInt(m.profile.mediaCount)}</div></div>

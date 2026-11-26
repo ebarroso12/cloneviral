@@ -11,5 +11,5 @@ export default async function Page() {
   const scripts = (await s.list("scripts", u.id)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 40);
   const [conn] = await s.list("ig_connection", u.id);
   const j = (x: any) => JSON.parse(JSON.stringify(x));
-  return <PlanejadorView line={j(line ?? { viral: 3, emocional: 3, tecnico: 3 })} posts={j(posts)} videos={j(videos)} scripts={j(scripts)} real={!!conn && !conn.demo} />;
+  return <PlanejadorView line={j(line ?? { viral: 3, emocional: 3, tecnico: 3 })} posts={j(posts)} videos={j(videos.filter((v) => v.ready !== false && !v.freed))} site={!!process.env.VERCEL} scripts={j(scripts)} real={!!conn && !conn.demo} />;
 }

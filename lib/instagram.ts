@@ -2,11 +2,13 @@
 // ATENÇÃO: este módulo precisa de um app Meta próprio (META_APP_ID, META_APP_SECRET) e, para uso por terceiros, App Review.
 import crypto from "node:crypto";
 import { getStore, scopedId } from "./store";
+import { refreshAds } from "./ads";
 
 const V = process.env.META_GRAPH_VERSION || "v27.0"; // versão usada nos exemplos atuais da documentação
 export const GRAPH = `https://graph.facebook.com/${V}`;
 const G = GRAPH;
-export const metaConfigured = () => !!(process.env.META_APP_ID && process.env.META_APP_SECRET);
+export type MetaCfg = { appId: string; secret: string; configId: string };
+export const envMeta = (): MetaCfg | null => (process.env.META_APP_ID && process.env.META_APP_SECRET ? { appId: process.env.META_APP_ID, secret: process.env.META_APP_SECRET, configId: process.env.META_CONFIG_ID ?? "" } : null);
 export const SCOPES = ["instagram_basic", "instagram_manage_insights", "instagram_content_publish", "pages_show_list", "pages_read_engagement", "business_management"];
 
 const key = () => {
@@ -42,18 +44,19 @@ export async function gj(url: string, opts: { method?: string; headers?: Record<
   return j;
 }
 
-export function authUrl(redirect: string, state: string) {
-  const q = new URLSearchParams({ client_id: process.env.META_APP_ID!, redirect_uri: redirect, state, response_type: "code" });
+const fromEnv = (): MetaCfg => ({ appId: process.env.META_APP_ID!, secret: process.env.META_APP_SECRET!, configId: process.env.META_CONFIG_ID ?? "" });
+export function authUrl(redirect: string, state: string, cfg: MetaCfg = fromEnv(), opts: { ads?: boolean } = {}) {
+  const q = new URLSearchParams({ client_id: cfg.appId, redirect_uri: redirect, state, response_type: "code" });
   // o Login do Facebook para Empresas define as permissões numa configuração salva (config_id)
-  if (process.env.META_CONFIG_ID) q.set("config_id", process.env.META_CONFIG_ID);
-  else q.set("scope", SCOPES.join(","));
+  if (cfg.configId) q.set("config_id", cfg.configId);
+  else q.set("scope", [...SCOPES, ...(opts.ads ? ["ads_read"] : [])].join(","));
   return `https://www.facebook.com/${V}/dialog/oauth?${q}`;
 }
 
-export async function exchangeCode(code: string, redirect: string) {
-  const q = new URLSearchParams({ client_id: process.env.META_APP_ID!, client_secret: process.env.META_APP_SECRET!, redirect_uri: redirect, code });
+export async function exchangeCode(code: string, redirect: string, cfg: MetaCfg = fromEnv()) {
+  const q = new URLSearchParams({ client_id: cfg.appId, client_secret: cfg.secret, redirect_uri: redirect, code });
   const short = await gj(`${G}/oauth/access_token?${q}`);
-  const q2 = new URLSearchParams({ grant_type: "fb_exchange_token", client_id: process.env.META_APP_ID!, client_secret: process.env.META_APP_SECRET!, fb_exchange_token: short.access_token });
+  const q2 = new URLSearchParams({ grant_type: "fb_exchange_token", client_id: cfg.appId, client_secret: cfg.secret, fb_exchange_token: short.access_token });
   const long = await gj(`${G}/oauth/access_token?${q2}`);
   return { token: long.access_token as string, expiresIn: (long.expires_in as number) ?? 60 * 86400 };
 }
@@ -240,6 +243,8 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
       warn("Audiência", e);
     }
   }
+  // anúncios: se estiverem conectados, relê o total; falha vira aviso e o número anterior fica
+  if (!late()) await refreshAds(userId, token).catch((e) => warn("Anúncios", e));
   const list = [...warnings];
   await store.update("ig_connection", conn.id, userId, { name: prof.name, igUsername: prof.username, bio: prof.biography, link: prof.website, picture: prof.profile_picture_url ?? conn.picture, lastSync: new Date().toISOString(), syncWarnings: list, syncPartial: partial });
   return { demo: false as const, partial, warnings: list };

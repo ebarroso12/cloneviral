@@ -4,7 +4,7 @@ import path from "node:path";
 import { getStore, dataDir, scopedId, publicDoc } from "./store";
 import { encrypt, type IgAccount } from "./instagram";
 
-const HISTORY = ["posts", "snapshots", "audience"];
+const HISTORY = ["posts", "snapshots", "audience", "ads_connection"];
 
 export class OtherAccount extends Error {
   constructor(username: string) {

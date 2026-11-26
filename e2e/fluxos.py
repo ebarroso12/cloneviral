@@ -529,6 +529,44 @@ def isolamento(browser, demo):
         assert r.status == 200, f"conta vazia: {rota} {r.status}"
 
 
+@caso("CONV dono convida pela tela; convidado entra, não vê os dados do dono nem convida")
+def convite(browser):
+    dono = browser.new_context(locale="pt-BR").new_page()
+    vigiar(dono)
+    assert api(dono, "POST", "/api/auth/login", {"email": "dono@exemplo.test", "password": "senha-de-teste-123"})[0] == 200
+    api(dono, "POST", "/api/c/ideas", {"text": "ideia só do dono"})
+    ir(dono, "convites")
+    dono.get_by_role("button", name="Gerar convite").click()
+    link = dono.get_by_label("Link do convite (aparece só agora)").input_value()
+    ir(dono, "conexoes")
+    dono.locator("#ma").fill("123456789012")
+    dono.locator("#ms").fill("0123456789abcdef0123456789abcdef")
+    dono.get_by_role("button", name="Salvar").click()
+    dono.get_by_text("App da Meta gravado.").wait_for()
+    ir(dono, "conexoes")
+    assert dono.get_by_role("link", name="Conectar Instagram").is_visible(), "app gravado e o botão continua parado"
+    assert "0123456789abcdef" not in dono.content(), "a chave secreta voltou para a tela"
+    r = dono.request.get(f"{BASE}/api/ig/connect", max_redirects=0)
+    assert r.headers["location"].startswith("https://www.facebook.com/") and "client_id=123456789012" in r.headers["location"]
+    amigo = browser.new_context(locale="pt-BR").new_page()
+    vigiar(amigo)
+    amigo.goto(link, wait_until="networkidle")
+    amigo.get_by_label("Seu nome").fill("Amigo")
+    amigo.get_by_label("E-mail").fill("amigo@exemplo.test")
+    amigo.get_by_label("Senha (8+ caracteres)").fill("senha-de-teste-123")
+    assert amigo.get_by_label("Código de cadastro ou convite").input_value()
+    amigo.get_by_role("button", name="Criar conta").click()
+    amigo.wait_for_url("**/conexoes")
+    assert api(amigo, "GET", "/api/c/ideas")[1] == []
+    assert api(amigo, "POST", "/api/invites", {})[0] == 403
+    assert api(amigo, "POST", "/api/meta-app", {"appId": "999999999999", "secret": "f" * 32})[0] == 403
+    assert amigo.locator("#ms").count() == 0
+    outro = browser.new_context().new_page()
+    code = link.split("=")[-1]
+    s, _ = api(outro, "POST", "/api/auth/signup", {"name": "C", "email": "c@exemplo.test", "password": "senha-de-teste-123", "code": code})
+    assert s == 400, "convite usado duas vezes"
+
+
 @caso("SEG-3 senha errada em série bloqueia")
 def forca_bruta(browser):
     p = browser.new_context().new_page()
@@ -559,6 +597,7 @@ with sync_playwright() as pw:
         f(pagina)
     isolamento(nav, pagina)
     legais(nav)
+    convite(nav)
     excluir(nav)
     sair(pagina)
     forca_bruta(nav)

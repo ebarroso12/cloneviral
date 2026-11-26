@@ -2,13 +2,16 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { api } from "@/lib/client";
+import { sendVideo } from "@/lib/sendVideo";
 import { Modal, PageHead, useToast } from "@/components/ui";
 
 const MES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const probe = (f: File) => new Promise<{ duration: number; width: number; height: number }>((res) => { const v = document.createElement("video"); v.preload = "metadata"; v.onloadedmetadata = () => res({ duration: v.duration, width: v.videoWidth, height: v.videoHeight }); v.onerror = () => res({ duration: 0, width: 0, height: 0 }); v.src = URL.createObjectURL(f); });
 
-export default function PlanejadorView({ line, posts, videos, scripts, real }: any) {
+export default function PlanejadorView({ line, posts, videos, scripts, real, site }: any) {
+  const max = site ? 50 : 100;
+  const [pct, setPct] = useState(0);
   const r = useRouter();
   const { toast, node } = useToast();
   const [ref, setRef] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
@@ -26,24 +29,28 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
     setUp(true);
     try {
       if (!/\.(mp4|mov)$/i.test(file.name)) throw new Error("Formato inválido. Use MP4 ou MOV.");
-      if (file.size > 100 * 1024 * 1024) throw new Error("O vídeo passa de 100 MB.");
+      if (file.size > max * 1024 * 1024) throw new Error(`O vídeo passa de ${max} MB.`);
+      setPct(0);
       const m = await probe(file);
       if (m.duration > 180) throw new Error("O vídeo passa de 3 minutos.");
-      const fd = new FormData(); fd.append("file", file); fd.append("duration", String(Math.round(m.duration))); fd.append("width", String(m.width)); fd.append("height", String(m.height));
-      await api("/api/upload", { body: fd }); toast("Vídeo enviado."); r.refresh();
+      await sendVideo(file, { duration: Math.round(m.duration), width: m.width, height: m.height }, site, setPct); toast("Vídeo enviado."); r.refresh();
     } catch (e: any) { toast(e.message, "err"); } finally { setUp(false); }
   };
   const schedule = async () => {
     if (!day || saving) return;
     setSaving(true);
     try {
-      await api("/api/schedule", { body: { date: day, time: f.time, caption: f.caption, videoId: f.videoId || null, scriptId: f.scriptId || null, kind: f.kind, autoPublish: real && !!f.videoId && f.autoPublish } });
+      await api("/api/schedule", { body: { date: day, time: f.time, caption: f.caption, tzOffset: new Date(`${day}T${f.time}:00`).getTimezoneOffset() || 0, videoId: f.videoId || null, scriptId: f.scriptId || null, kind: f.kind, autoPublish: real && !!f.videoId && f.autoPublish } });
       toast("Post agendado.");
       setDay(null);
       // o próximo agendamento começa limpo: vídeo e publicação automática não se repetem sozinhos
       setF({ ...f, caption: "", videoId: "", scriptId: "", autoPublish: false });
       r.refresh();
     } catch (e: any) { toast(e.message, "err"); } finally { setSaving(false); }
+  };
+  const delVideo = async (v: any) => {
+    if (!confirm(`Excluir o vídeo ${v.name}?`)) return;
+    try { await api(`/api/upload?id=${v.id}`, { method: "DELETE" }); toast("Vídeo excluído."); r.refresh(); } catch (e: any) { toast(e.message, "err"); }
   };
   const del = async (id: string) => { await api(`/api/c/scheduled_posts?id=${id}`, { method: "DELETE" }); r.refresh(); };
   const inDay = day ? posts.filter((p: any) => p.date === day) : [];
@@ -71,12 +78,12 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
             </button>
           ) : <div key={i} />)}
         </div>
-        <p className="muted tiny" style={{ marginTop: 10 }}>{real ? "Marque Publicar sozinho ao agendar um vídeo. O app precisa estar aberto no horário." : "Conecte uma conta real do Instagram para publicar automaticamente. Até lá o planejador organiza os posts."}</p>
+        <p className="muted tiny" style={{ marginTop: 10 }}>{real ? (site ? "Marque Publicar sozinho ao agendar um vídeo. A publicação sai em até alguns minutos depois do horário." : "Marque Publicar sozinho ao agendar um vídeo. O app precisa estar aberto no horário.") : "Conecte uma conta real do Instagram para publicar automaticamente. Até lá o planejador organiza os posts."}</p>
       </div>
       <div className="card" style={{ marginTop: 14 }}>
-        <div className="row between"><h2>Vídeos</h2><label className="btn primary" style={{ cursor: "pointer" }}>{up ? "Enviando..." : "Enviar vídeo"}<input type="file" accept=".mp4,.mov,video/mp4,video/quicktime" hidden onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} /></label></div>
-        <p className="muted tiny">MP4 ou MOV, até 100 MB e 3 minutos.</p>
-        {videos.length === 0 ? <div className="empty">Nenhum vídeo enviado.</div> : <ul className="muted small">{videos.map((v: any) => <li key={v.id}>{v.name} · {(v.size / 1048576).toFixed(1)} MB · {v.duration}s</li>)}</ul>}
+        <div className="row between"><h2>Vídeos</h2><label className="btn primary" style={{ cursor: "pointer" }}>{up ? (site ? `Enviando ${pct}%...` : "Enviando...") : "Enviar vídeo"}<input type="file" accept=".mp4,.mov,video/mp4,video/quicktime" hidden onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} /></label></div>
+        <p className="muted tiny">MP4 ou MOV, até {max} MB e 3 minutos.{site && " No site, o vídeo é apagado depois de publicado para liberar espaço."}</p>
+        {videos.length === 0 ? <div className="empty">Nenhum vídeo enviado.</div> : <ul className="muted small">{videos.map((v: any) => <li key={v.id}>{v.name} · {(v.size / 1048576).toFixed(1)} MB · {v.duration}s <button className="btn sm danger" onClick={() => delVideo(v)}>Excluir</button></li>)}</ul>}
       </div>
       {day && (
         <Modal onClose={() => setDay(null)} title={`Dia ${day.split("-").reverse().join("/")}`}>
@@ -89,7 +96,7 @@ export default function PlanejadorView({ line, posts, videos, scripts, real }: a
           <div className="field"><label htmlFor="s">Roteiro</label><select id="s" value={f.scriptId} onChange={(e) => { const sc = scripts.find((x: any) => x.id === e.target.value); setF({ ...f, scriptId: e.target.value, caption: sc ? `${sc.hook}\n\n${sc.cta}` : f.caption }); }}><option value="">Nenhum</option>{scripts.map((s: any) => <option key={s.id} value={s.id}>{s.title}</option>)}</select></div>
           <div className="field"><label htmlFor="c">Legenda</label><textarea id="c" value={f.caption} onChange={(e) => setF({ ...f, caption: e.target.value })} /></div>
           <label className="row small" style={{ marginBottom: 12 }}><input type="checkbox" style={{ width: "auto" }} checked={real && !!f.videoId && f.autoPublish} disabled={!real || !f.videoId} onChange={(e) => setF({ ...f, autoPublish: e.target.checked })} /> Publicar sozinho no Instagram neste horário</label>
-          <p className="tiny muted">{!real ? "Disponível depois de conectar a sua conta real em Conexões." : !f.videoId ? "Escolha um vídeo para liberar a publicação automática." : "O app precisa estar aberto no horário. Com mais de 6 horas de atraso ele não publica e avisa."}</p>
+          <p className="tiny muted">{!real ? "Disponível depois de conectar a sua conta real em Conexões." : !f.videoId ? "Escolha um vídeo para liberar a publicação automática." : site ? "A publicação pode sair alguns minutos depois do horário. Com mais de 6 horas de atraso ele não publica e avisa." : "O app precisa estar aberto no horário. Com mais de 6 horas de atraso ele não publica e avisa."}</p>
           <button className="btn primary" onClick={schedule} disabled={saving}>{saving ? "Agendando..." : "Agendar"}</button>
         </Modal>
       )}

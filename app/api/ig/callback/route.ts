@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getUser } from "@/lib/auth";
 import { exchangeCode, listInstagramAccounts, missingPermissions, encrypt, syncAccount, READ_PERMISSIONS } from "@/lib/instagram";
 import { saveConnection } from "@/lib/connection";
+import { metaConfig } from "@/lib/metaApp";
 import { getStore, scopedId } from "@/lib/store";
 
 export const maxDuration = 60;
@@ -17,7 +18,9 @@ export async function GET(req: Request) {
   if (!url.searchParams.get("code") || url.searchParams.get("state") !== jar.get("rv_oauth_state")?.value) return back("erro=autorizacao");
   jar.delete("rv_oauth_state");
   try {
-    const { token, expiresIn } = await exchangeCode(url.searchParams.get("code")!, `${origin}/api/ig/callback`);
+    const cfg = await metaConfig();
+    if (!cfg) throw new Error("O app da Meta não está configurado.");
+    const { token, expiresIn } = await exchangeCode(url.searchParams.get("code")!, `${origin}/api/ig/callback`, cfg);
     const missing = await missingPermissions(token);
     const essential = missing.filter((p) => READ_PERMISSIONS.includes(p));
     if (essential.length) throw new Error(`Faltou liberar: ${essential.join(", ")}.`);
