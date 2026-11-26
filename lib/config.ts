@@ -38,3 +38,9 @@ export function storageProblem(env: Env = process.env) {
 export function uploadProblem(env: Env = process.env) {
   return env.VERCEL ? "O envio de vídeo ainda não funciona neste servidor. Use o app instalado no seu computador para guardar vídeos." : null;
 }
+
+/** Texto da tela Conexões enquanto o app da Meta não está configurado. */
+export function avisoSemMeta({ demo, site }: { demo: boolean; site: boolean }) {
+  const base = `A conexão com o Instagram ainda não foi ligada ${site ? "neste site" : "neste computador"}. Falta criar o seu app gratuito na Meta e informar o ID e a chave secreta dele.`;
+  return demo ? `${base} Os números que aparecem são da conta de demonstração.` : base;
+}

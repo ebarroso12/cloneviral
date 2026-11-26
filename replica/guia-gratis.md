@@ -26,6 +26,11 @@ Não cole a chave secreta em conversas nem a envie para o GitHub.
 
 **Isto nunca foi testado com uma conta real.** Se aparecer erro, copie a mensagem (sem chaves) e me mande.
 
+### No site publicado (em vez do computador)
+
+- Endereço de retorno na Meta: `https://cloneviral-iota.vercel.app/api/ig/callback`.
+- `META_APP_ID`, `META_APP_SECRET` e `META_CONFIG_ID` vão em Vercel, projeto `cloneviral`, Settings, Environment Variables; depois é preciso publicar de novo.
+
 ## 2. IA para os textos (opcional, plano gratuito)
 
 1. Em aistudio.google.com, crie uma chave de API em um projeto **sem faturamento ativado**.

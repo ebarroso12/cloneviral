@@ -120,3 +120,20 @@ test("PUB-5: o pacote de publicação leva só o resumo do segredo ao banco e n�
   assert.equal(fs.readFileSync(path.join(out, "2-vercel.env"), "utf8"), env);
   assert.match(fs.readFileSync(".gitignore", "utf8"), /^publicacao\/$/m);
 });
+
+test("TELA-1: sem o app da Meta, o aviso não inventa conta de demonstração nem manda ler o README", async () => {
+  const { avisoSemMeta } = await import("../lib/config");
+  const real = avisoSemMeta({ demo: false, site: true });
+  assert.equal(/demonstra/i.test(real), false);
+  assert.equal(/README/i.test(real), false);
+  assert.match(real, /ainda não foi ligada/);
+  assert.match(avisoSemMeta({ demo: true, site: false }), /demonstração/);
+  assert.match(avisoSemMeta({ demo: false, site: false }), /neste computador/);
+  assert.match(real, /neste site/);
+});
+
+test("TELA-1: a tela de conexões usa o aviso único e não oferece botão que só devolve o aviso", () => {
+  const view = fs.readFileSync("app/(app)/conexoes/view.tsx", "utf8");
+  assert.equal(/README|conta de demonstração fica conectada/.test(view), false);
+  assert.match(view, /meta \? <a className="btn primary" href="\/api\/ig\/connect">/);
+});

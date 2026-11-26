@@ -129,8 +129,8 @@ def anuncios(page):
 @caso("F01-E1 conectar sem app Meta avisa")
 def conectar(page):
     ir(page, "conexoes")
-    page.get_by_role("link", name="Refazer a autorização").click()
-    page.get_by_text("O app Meta ainda não foi configurado").wait_for()
+    page.get_by_text("ainda não foi ligada").wait_for()
+    assert page.get_by_role("link", name="Refazer a autorização").count() == 0, "oferece um botão que não funciona"
 
 
 @caso("F02-H1 persona, negócio e identidade persistem")
