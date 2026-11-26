@@ -29,7 +29,8 @@ Não cole a chave secreta em conversas nem a envie para o GitHub.
 ### No site publicado (em vez do computador)
 
 - Endereço de retorno na Meta: `https://cloneviral-iota.vercel.app/api/ig/callback`.
-- `META_APP_ID`, `META_APP_SECRET` e `META_CONFIG_ID` vão em Vercel, projeto `cloneviral`, Settings, Environment Variables; depois é preciso publicar de novo.
+- Entre como dono, abra **Conexões** e grave o ID do app, a chave secreta e, se houver, o ID da configuração no quadro **Seu app da Meta**. Não precisa mexer na Vercel.
+- Para os anúncios, depois de conectar o Instagram use **Autorizar leitura de anúncios** (permissão `ads_read`; com o Login para Empresas, inclua-a na configuração) e então **Conectar anúncios**.
 
 ## 2. IA para os textos (opcional, plano gratuito)
 

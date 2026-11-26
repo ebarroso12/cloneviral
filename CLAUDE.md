@@ -57,10 +57,12 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 - Métrica que a Meta não devolveu não é gravada como zero, e a falha vira aviso em `syncWarnings`.
 - Número estimado nunca aparece como medido (anúncios simulados só na demo).
 - Demo, cadastro e limitações de servidor são decididos em `lib/config.ts`.
+- Dono é a primeira conta real (`isOwner`): só ele convida e grava o app da Meta. Convite é de uso único.
+- Horário de agendamento passa por `dueTime` (usa o fuso do aparelho; o servidor está em UTC).
 
 ## Limitações abertas
 
-Instagram (conexão, coleta, publicação) e Gemini nunca testados contra o serviço real. Publicado na Vercel com Supabase real (ver `replica/deploy.md`). Envio de vídeo não funciona na Vercel.
+Instagram (conexão, coleta, publicação) e Gemini nunca testados contra o serviço real. Publicado na Vercel com Supabase real (ver `replica/deploy.md`). No site, o vídeo vai em pedaços para o banco (`lib/videos.ts`) e a publicação é chamada pelo GitHub Actions.
 
 ## Pipeline replica e regras do projeto
 

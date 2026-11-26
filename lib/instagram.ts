@@ -1,5 +1,5 @@
 // Integração oficial com a Instagram Graph API (via Login do Facebook). Usa apenas endpoints públicos e o token do próprio usuário.
-// ATENÇÃO: este módulo precisa de um app Meta próprio (META_APP_ID, META_APP_SECRET) e, para uso por terceiros, App Review.
+// ATENÇÃO: este módulo precisa de um app Meta próprio (gravado na tela Conexões ou por META_APP_ID e META_APP_SECRET) e, para uso por terceiros, App Review.
 import crypto from "node:crypto";
 import { getStore, scopedId } from "./store";
 import { refreshAds } from "./ads";

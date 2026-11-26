@@ -4,6 +4,7 @@ import { uploadDir, videoPath, VIDEO_EXTS, CHUNK, startUpload, savePart, finishU
 import { route, bad } from "@/lib/api";
 import { getStore, uid } from "@/lib/store";
 
+export const maxDuration = 120;
 const MAX = 100 * 1024 * 1024;
 export const POST = route(async (user, req) => {
   // envio em pedaços (site): começar e terminar

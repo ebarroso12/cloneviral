@@ -18,4 +18,6 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         # o resultado não é mostrado: o registro deste repositório é público
-        run: curl --fail --silent --show-error --max-time 320 -o /dev/null -H "Authorization: Bearer $CRON_SECRET" https://cloneviral-iota.vercel.app/api/cron/publish
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "::warning::Falta o segredo CRON_SECRET neste repositório: nada foi publicado."; exit 0; fi
+          curl --fail --silent --show-error --max-time 320 -o /dev/null -H "Authorization: Bearer $CRON_SECRET" https://cloneviral-iota.vercel.app/api/cron/publish

@@ -24,9 +24,11 @@ Atenção: o projeto da Vercel está ligado à cópia `edsonbdados-Bancodados/cl
 | exclusão de conta | existe, com senha |
 | favicon e imagem social próprios | favicon sim; imagem social não |
 
+## Publicação agendada no site
+`.github/workflows/publicar.yml` chama `/api/cron/publish` a cada 10 minutos (grátis em repositório público; o GitHub pode atrasar). Precisa do segredo `CRON_SECRET` em `ebarroso12/cloneviral`, Settings, Secrets and variables, Actions, com o mesmo valor da Vercel. **Ainda não cadastrado.** O GitHub desliga agendamentos de repositório parado por 60 dias.
+
 ## Limitações conhecidas num servidor
-- Envio de vídeo responde que não está disponível (falta enviar direto ao Storage).
-- Publicação automática de Reels não funciona no servidor: depende do vídeo, que só pode ser guardado no computador.
+- Vídeo no site: até 50 MB por arquivo e 150 MB no total, em pedaços no banco; apagado depois de publicado. Provado no banco real com 6 MB; não testado pelo navegador no site.
 - O plano gratuito da Vercel é para uso não comercial.
-- A trava de cobrança dupla vale dentro de uma instância do servidor.
+- A trava de cobrança dupla e a de publicação valem dentro de uma instância do servidor.
 - A coleta com muitos posts precisa de várias execuções, porque cada uma para antes do limite de tempo.

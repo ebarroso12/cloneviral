@@ -6,7 +6,7 @@ Conectar Instagram via OAuth Meta (conta profissional),conexões,must,yes,partia
 Renovar autorização / trocar Página sem apagar histórico,conexões,must,yes,partial,nunca testado com conta real
 Desconectar Instagram,conexões,must,yes,yes,
 "Mostrar ""medindo desde"" e dias medidos",conexões,should,yes,yes,
-Conectar Anúncios Meta (só leitura) para somar visualizações pagas,conexões,could,yes,partial,só na demonstração; leitura real (ads_read) não implementada
+Conectar Anúncios Meta (só leitura) para somar visualizações pagas,conexões,could,yes,partial,leitura real (ads_read) testada só com a Meta simulada; falta conta real
 Sincronização do perfil e posts (última sincronização exibida),métricas,must,yes,partial,coleta manual e diária testadas com a Meta simulada; falta conta real
 Cartão do perfil (foto; nome; @; bio; link; status Conectado),métricas,must,yes,yes,
 KPI Seguidores,métricas,must,yes,yes,última coleta
