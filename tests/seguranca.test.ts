@@ -149,3 +149,12 @@ test("BUG-014: cores da identidade visual não injetam marcação no slide", asy
   const svg = slideSvg({ role: "capa", title: "t", text: "" }, 0, 1, { bg: evil, fg: evil, accent: evil, muted: evil, font: evil });
   assert.equal(svg.includes("<script"), false);
 });
+
+test("BUG-020: na Vercel o app não finge gravar em disco descartável", async () => {
+  const { storageProblem, uploadProblem } = await import("../lib/config");
+  assert.match(storageProblem({ VERCEL: "1" })!, /Supabase/);
+  assert.equal(storageProblem({ VERCEL: "1", SUPABASE_URL: "u", SUPABASE_SERVICE_ROLE_KEY: "k" }), null);
+  assert.equal(storageProblem({}), null);
+  assert.match(uploadProblem({ VERCEL: "1" })!, /vídeo/i);
+  assert.equal(uploadProblem({}), null);
+});

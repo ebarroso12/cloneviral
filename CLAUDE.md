@@ -2,24 +2,29 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Radar Viral: painel de métricas e máquina de conteúdo para Instagram, reconstruído do mapeamento funcional do Sistema Viral. Responder ao dono sempre em português.
+Radar Viral: painel de métricas e máquina de conteúdo para Instagram, reconstruído do mapeamento funcional do app de referência (identificado em `replica/recon.md`). Responder ao dono sempre em português.
 
 ## Comandos
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
+npm ci
+npm run dev        # http://localhost:3000, com conta demo
+npm run iniciar    # uso local em modo produção (o mesmo que "Abrir Radar Viral.cmd")
 npm run build
 npm test           # tsx --test tests/*.test.ts
-npm run seed       # APAGA data/db.json inteiro e recria a conta demo
+npm run seed       # recria a demo; recusa apagar banco com conta real sem --force
 npx tsc --noEmit   # checagem de tipos (não há linter configurado)
 
 # um arquivo / um teste
-npx tsx --test tests/metrics.test.ts
-npx tsx --test --test-name-pattern="autenticidade" tests/metrics.test.ts
+npx tsx --test tests/seguranca.test.ts
+npx tsx --test --test-name-pattern="BUG-007" tests/seguranca.test.ts
+
+# fluxos no navegador (Playwright para Python), servidor com banco vazio em outra janela
+RV_DEMO=1 RV_DATA_DIR=<pasta vazia> npx next start -p 3100
+python e2e/fluxos.py http://localhost:3100
 ```
 
-Sem variáveis de ambiente o app roda em modo demonstração (`demo@radarviral.app` / `demo-radar-2026`, dados sintéticos). Variáveis opcionais em `.env.example`; o código também lê `APP_URL`, `META_GRAPH_VERSION` e `RV_DEMO_DATA_FOR_NEW_USERS`.
+Os fluxos gravam no banco: rode sempre em pasta vazia, senão os casos de cadastro falham. Testes de unidade definem `RV_DATA_DIR` temporário antes do primeiro `getStore()`; um teste novo que grave precisa fazer o mesmo, ou escreve em `data/`.
 
 ## Arquitetura
 
@@ -32,16 +37,23 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 - **Créditos** (`lib/credits.ts`): livro-razão `ledger`; saldo é a soma das linhas. Cobrar antes de gerar (`charge`) e devolver a diferença (`refund`) se render menos. Os custos em `COSTS` reproduzem o original e há teste sobre eles.
 - **Conteúdo** (`lib/ai.ts`): geradores por modelo, determinísticos e sem custo. Com `ANTHROPIC_API_KEY`, `llmJson` tenta o modelo pago e qualquer falha cai em silêncio no gerador por modelo, então texto genérico não prova que a IA respondeu.
 - **Métricas** (`lib/metrics.ts`): funções puras sobre posts, snapshots e audiência. `tests/metrics.test.ts` fixa os números observados na tela original; mudança de fórmula tem de ser conferida com `replica/recon.md`. O terceiro sinal da autenticidade (comentários por curtida) é hipótese não confirmada.
-- **Instagram** (`lib/instagram.ts`): OAuth do Facebook Login + Graph API, token em AES-256-GCM com chave derivada de `RV_SECRET`. Nunca testado contra conta real. Vários `catch {}` na sincronização engolem erro e deixam métricas zeradas.
+- **Instagram** (`lib/instagram.ts`): OAuth do Facebook Login + Graph API, token em AES-256-GCM com chave derivada de `RV_SECRET` (obrigatória em produção). `syncAccount` tem prazo e devolve `partial`; `syncAll` serve `/api/cron/sync`. Os testes simulam o `fetch`.
 - **Sessão** (`lib/auth.ts`): scrypt, cookie `rv_session`, hash do token em `sessions`.
 
-## Armadilhas (lidas no código; conferir se ainda valem)
+## Regras que o código já garante (não desfazer)
 
-- IDs fixos (`conn`, `aud`, `snap_<data>`) são compartilhados entre usuários. Como a conta demo é semeada sozinha (`ensureSeed` roda em todo `getUser` e `login`), um segundo usuário pode colidir com ela: snapshots descartados na sincronização, conexão e audiência sobrescritas.
-- A conta demo, com senha publicada no repositório, é criada também quando o banco é o Supabase. Resolver antes de qualquer deploy.
-- `RV_SECRET` ausente cai numa chave padrão escrita no código.
-- `/api/upload` grava em `data/uploads/` no disco e aceita 100 MB: não funciona em função da Vercel (disco efêmero e limite de corpo de cerca de 4,5 MB).
-- `/api/cron/publish` é esqueleto (501). Não há gateway de pagamento.
+- Chave fixa (`conn`, `aud`, `snap_<data>`, id de post da Meta) vira `scopedId(userId, chave)`. `insert` recusa id de outra conta.
+- Corpo vindo do navegador passa por `clientData`; documento que sai para o navegador passa por `publicDoc` (remove `token`).
+- `videos` é só leitura na API genérica; caminho de arquivo sai de `videoPath`.
+- Geração paga usa `withCharge` (devolve o crédito se falhar). Nunca `charge` solto numa rota.
+- `findAll` atravessa contas: só para a coleta diária.
+- Métrica que a Meta não devolveu não é gravada como zero, e a falha vira aviso em `syncWarnings`.
+- Número estimado nunca aparece como medido (anúncios simulados só na demo).
+- Demo, cadastro e limitações de servidor são decididos em `lib/config.ts`.
+
+## Limitações abertas
+
+Publicação automática (`/api/cron/publish` responde 501), pagamento, envio de vídeo na Vercel, e integração com Instagram e Supabase nunca testadas contra serviço real.
 
 ## Pipeline replica e regras do projeto
 

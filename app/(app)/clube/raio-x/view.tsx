@@ -11,8 +11,8 @@ export default function View({ posts, rows }: any) {
   const [id, setId] = useState(posts[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
   const [highlights, setHighlights] = useState("");
-  const profile = async () => { setBusy(true); try { await api("/api/circulo/perfil", { body: { highlights } }); toast("Raio-X do perfil pronto."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); } };
-  const go = async () => { setBusy(true); try { await api("/api/circulo/raiox", { body: { postId: id } }); toast("Raio-X pronto."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); } };
+  const profile = async () => { setBusy(true); try { await api("/api/clube/perfil", { body: { highlights } }); toast("Raio-X do perfil pronto."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); } };
+  const go = async () => { setBusy(true); try { await api("/api/clube/raiox", { body: { postId: id } }); toast("Raio-X pronto."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); } };
   return (
     <>
       <PageHead title="Raio-X" desc="Duas leituras: o seu perfil em seis partes, e um post seu comparado com a mediana." />

@@ -9,7 +9,7 @@ export default function View({ rows }: { rows: any[] }) {
   const r = useRouter();
   const { toast, node } = useToast();
   const [busy, setBusy] = useState(false);
-  const go = async () => { setBusy(true); try { await api("/api/circulo/analise", { body: {} }); toast("Análise pronta."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); } };
+  const go = async () => { setBusy(true); try { await api("/api/clube/analise", { body: {} }); toast("Análise pronta."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); } };
   return (
     <>
       <PageHead title="Sala de análise" desc="Uma leitura do seu perfil com os números que já foram medidos, os padrões dos seus melhores posts e o que ajustar primeiro." />

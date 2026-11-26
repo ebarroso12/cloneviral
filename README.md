@@ -1,37 +1,53 @@
 # Radar Viral (cloneviral)
 
-Painel de métricas e máquina de conteúdo para Instagram, reconstruído a partir do mapeamento funcional do Sistema Viral (clean-room: funções e fluxos, sem código, textos, marca ou arte do original).
+Painel de métricas e máquina de conteúdo para Instagram, reconstruído a partir do mapeamento funcional de um app de referência (`replica/recon.md`). Clean-room: funções e fluxos, sem código, textos, marca ou arte do original.
 
-- `replica/recon.md` — mapa de telas, fluxos, fórmulas das métricas, modelo de dados
-- `replica/features.csv` — matriz de funções (paridade via `replica-diff`)
-- `lib/` — camada de dados (arquivo local ou Supabase), métricas, créditos, IA
-- Stack: Next.js 15 + TypeScript + Supabase (opcional, `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`)
+## Abrir no computador
 
-## Rodar
+Dê dois cliques em **`Abrir Radar Viral.cmd`**. Na primeira vez ele constrói o app (alguns minutos) e abre `http://localhost:3000`. Só este computador acessa.
+
+1. Clique em **Criar conta**: a primeira conta vira a do dono e o cadastro fecha.
+2. Seus dados ficam em `data/db.json`. O segredo que protege o token do Instagram fica em `.env.local`. Faça cópia dos dois juntos.
+
+Requisitos: Node 20 ou mais novo e, uma única vez, `npm ci`.
+
+## Desenvolver
 
 ```bash
-npm install
-npm run dev     # http://localhost:3000
-npm test        # testes das fórmulas
+npm ci
+npm run dev     # http://localhost:3000, com conta de demonstração
+npm test
+npm run build
 ```
 
-Sem variáveis de ambiente o app roda em modo demonstração, com dados sintéticos e sem nenhum custo.
+Em desenvolvimento existe a conta `demo@radarviral.app` / `demo-radar-2026`, com dados sintéticos. Ela fica desligada em produção e quando há Supabase. `npm run seed` recria a demonstração e se recusa a apagar um banco com conta real.
 
-## Conta de demonstração
+## Fluxos no navegador
 
-`demo@radarviral.app` / `demo-radar-2026` (dados 100% sintéticos). `npm run seed` recria do zero.
+```bash
+pip install playwright && playwright install chromium
+npm run build
+RV_DEMO=1 RV_DATA_DIR=<pasta vazia> npx next start -p 3100
+python e2e/fluxos.py http://localhost:3100
+```
 
 ## Conectar o Instagram de verdade
 
-1. Crie um app em developers.facebook.com e adicione o produto Login do Facebook.
-2. Defina `META_APP_ID`, `META_APP_SECRET` e `RV_SECRET` (veja `.env.example`).
-3. Cadastre `https://SEU_DOMINIO/api/ig/callback` como URI de redirecionamento.
-4. Conta do Instagram profissional ligada a uma Página do Facebook. Para usar com outras contas, o app precisa passar pela análise da Meta.
+1. Crie um app em developers.facebook.com com o produto Login do Facebook.
+2. Em `.env.local`, defina `META_APP_ID` e `META_APP_SECRET`.
+3. Cadastre `http://localhost:3000/api/ig/callback` (ou o seu domínio) como URI de redirecionamento.
+4. A conta do Instagram precisa ser profissional e ligada a uma Página do Facebook.
 
-Esta parte foi escrita seguindo a documentação oficial e **não foi testada contra uma conta real**.
+Escrito conforme a documentação oficial e testado apenas com a Meta **simulada**. Nunca rodou contra uma conta real.
 
 ## O que não está pronto
 
-- Publicação automática dos posts agendados (`/api/cron/publish` é só um esqueleto).
-- Cobrança do plano START (não há gateway; "Quero mais créditos" concede um pacote de demonstração).
-- Varredura de perfis de terceiros e sugestão de perfis: a API oficial não entrega esses dados.
+- Publicação automática dos posts agendados.
+- Cobrança do plano e renovação mensal de créditos.
+- Perfis de terceiros e sugestão de perfis (a API oficial não entrega).
+- Envio de vídeo em servidor na Vercel.
+- Texto por IA só com `ANTHROPIC_API_KEY` (paga por uso). Sem ela, os textos saem de modelos fixos e se repetem.
+
+## Documentos do projeto
+
+Em `replica/`: `recon.md`, `architecture.md`, `features.csv`, `parity.md`, `test-plan.md`, `bugs.md`, `fixes.md`, `brand.md`, `launch/launch-plan.md`, `deploy.md`.

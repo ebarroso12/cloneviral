@@ -19,9 +19,9 @@ SHOTS = os.path.join(os.path.dirname(__file__), "..", "replica", "clone-screens"
 os.makedirs(SHOTS, exist_ok=True)
 
 ROTAS = ["metricas", "conexoes", "persona", "meu-negocio", "identidade-visual", "varredura", "noticias", "ideias",
-         "roteiro", "carrossel", "serie", "isca", "planejador-editorial", "meu-perfil-pronto", "circulo-dos-100",
-         "circulo-dos-100/sala-de-analise", "circulo-dos-100/raio-x", "circulo-dos-100/lazastory",
-         "circulo-dos-100/roteiros", "meu-plano"]
+         "roteiro", "carrossel", "serie", "isca", "planejador-editorial", "meu-perfil-pronto", "clube",
+         "clube/sala-de-analise", "clube/raio-x", "clube/stories",
+         "clube/roteiros", "meu-plano"]
 
 resultados = []
 problemas = []
@@ -184,7 +184,7 @@ def roteiro(page):
     ir(page, "roteiro")
     page.locator("#tema").fill("agenda cheia")
     page.get_by_role("button", name="Criar roteiro · 1 crédito").click()
-    page.get_by_text("Roteiro criado.").wait_for()
+    page.get_by_text("Roteiro criado.", exact=True).wait_for()
     lista = api(page, "GET", "/api/c/scripts")[1]
     n = len(lista)
     r = page.request.get(f"{BASE}/api/pdf/script/{lista[0]['id']}")
@@ -200,7 +200,7 @@ def carrossel(page):
     ir(page, "carrossel")
     page.locator("#t").fill("3 erros na agenda")
     page.get_by_role("button", name="Criar carrossel · 2 créditos").click()
-    page.get_by_text("Carrossel criado.").wait_for()
+    page.get_by_text("Carrossel criado.", exact=True).wait_for()
     page.get_by_role("button", name="Aprovar").first.click()
     page.get_by_text("Aprovado").first.wait_for()
     with page.expect_download() as d:
@@ -221,7 +221,7 @@ def capa(page):
     page.locator("#foto").set_input_files({"name": "f.png", "mimeType": "image/png", "buffer": base64.b64decode(png)})
     page.get_by_text("Foto pronta.").wait_for()
     page.get_by_role("button", name="Criar carrossel · 2 créditos").click()
-    page.get_by_text("Carrossel criado.").wait_for()
+    page.get_by_text("Carrossel criado.", exact=True).wait_for()
     page.locator("svg image").first.wait_for(state="attached")
     with page.expect_download() as d:
         page.get_by_role("button", name="Baixar PNG", exact=True).first.click()
@@ -233,7 +233,7 @@ def isca(page):
     ir(page, "isca")
     page.locator("#k").fill("AGENDA")
     page.get_by_role("button", name="Criar isca · 3 créditos").click()
-    page.get_by_text("Isca criada.").wait_for()
+    page.get_by_text("Isca criada.", exact=True).wait_for()
     i = api(page, "GET", "/api/c/lead_magnets")[1][0]
     assert page.request.get(f"{BASE}/api/pdf/isca/{i['id']}").body()[:4] == b"%PDF"
 
@@ -277,16 +277,16 @@ def serie(page):
 
 @caso("F07-H1 sala de análise, raio-x e stories")
 def circulo(page):
-    for rota, botao, ok in [("circulo-dos-100/sala-de-analise", "Analisar meu perfil · 2 créditos", "Análise pronta."),
-                            ("circulo-dos-100/raio-x", "Fazer raio-x · 1 crédito", "Raio-X pronto.")]:
+    for rota, botao, ok in [("clube/sala-de-analise", "Analisar meu perfil · 2 créditos", "Análise pronta."),
+                            ("clube/raio-x", "Fazer raio-x · 1 crédito", "Raio-X pronto.")]:
         ir(page, rota)
         page.get_by_role("button", name=botao).click()
         page.get_by_text(ok).wait_for()
-    ir(page, "circulo-dos-100/raio-x")
+    ir(page, "clube/raio-x")
     page.get_by_role("button", name="Raio-X do perfil · 2 créditos").click()
     page.get_by_text("Raio-X do perfil pronto.").wait_for()
     page.get_by_text("Destaques", exact=True).last.wait_for()
-    ir(page, "circulo-dos-100/lazastory")
+    ir(page, "clube/stories")
     page.locator("#g").fill("convidar para a avaliação")
     page.get_by_role("button", name="Criar sequência · 1 crédito").click()
     page.get_by_text("Sequência criada.").wait_for()
@@ -411,7 +411,7 @@ def isca_colada(page):
     page.locator("#tx").fill("roteiro colado sobre sono reparador")
     page.locator("#k").fill("SONO")
     page.get_by_role("button", name="Criar isca · 3 créditos").click()
-    page.get_by_text("Isca criada.").wait_for()
+    page.get_by_text("Isca criada.", exact=True).wait_for()
     assert "sono reparador" in json.dumps(api(page, "GET", "/api/c/lead_magnets")[1], ensure_ascii=False)
     ir(page, "planejador-editorial")
     page.get_by_role("button", name="Mais Virais").click()

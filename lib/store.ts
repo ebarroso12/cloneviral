@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { storageProblem } from "./config";
 
 export type Doc = { id: string; userId: string; createdAt: string; updatedAt: string; [k: string]: any };
 
@@ -189,6 +190,8 @@ class SupabaseStore implements Store {
 const g = globalThis as unknown as { __store?: Store };
 export function getStore(): Store {
   if (g.__store) return g.__store;
+  const problem = storageProblem();
+  if (problem) throw new Error(problem);
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   g.__store = url && key ? new SupabaseStore(url, key) : new FileStore(path.join(dataDir(), "db.json"));

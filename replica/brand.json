@@ -1,0 +1,6 @@
+{
+  "name": "Radar Viral",
+  "avoid": ["Sistema Viral", "SistemaViral", "LazaStory", "CopyCut", "Círculo dos 100"],
+  "domains": ["sistemaviral.app.br"],
+  "colors": []
+}

@@ -18,11 +18,18 @@ Só entra aqui o que foi reproduzido (teste que falhou antes da correção). S1 
 | BUG-012 | S2 | "Regenerar" criava um roteiro extra além de reescrever o atual | teste BUG-012 (idem, confirmado na leitura) | corrigido |
 | BUG-013 | S3 | token cifrado do Instagram ia para o navegador | teste BUG-013 | corrigido |
 | BUG-014 | S3 | cores da identidade visual permitiam injetar marcação no slide | teste BUG-014: `<script>` presente no SVG | corrigido |
+| BUG-015 | S4 | ajuda "i": passar o mouse abria e o clique fechava | fluxo no navegador falhou | corrigido |
+| BUG-016 | S3 | ícones entravam no nome lido por leitor de tela; botão de menu aparecia no computador; quarto indicador e calendário desalinhados; texto longo estourava a largura no celular | fluxos no navegador e capturas | corrigido |
+| BUG-017 | S2 | 7 dias, Hoje e Ontem contavam posições na lista e erravam com dias sem coleta | teste: 100 em vez de 50 | corrigido |
+| BUG-018 | S2 | falha da Meta era engolida e gravava zero por cima da métrica | teste BUG-018 | corrigido |
+| BUG-019 | S2 | sincronização sem prazo, post a post | teste BUG-019 | corrigido: para no prazo e continua depois |
+| BUG-020 | S1 | no servidor sem banco externo, o app aceitaria dados num disco descartável | teste BUG-020 (módulo novo) | corrigido |
+| BUG-021 | S1 | Next 15.1.6 e React 19.0.0 com vulnerabilidades críticas, entre elas execução remota de código | `npm audit` | corrigido: Next 15.5.29, 0 vulnerabilidades |
 
-## A verificar (ainda não reproduzido)
+## A verificar (não reproduzido)
 
-- Ícone de ajuda "i": no computador, passar o mouse abre e o clique fecha em seguida.
-- Sincronização real do Instagram busca métrica post a post; com 2.000 posts deve estourar o tempo de uma função.
-- Erros da sincronização são engolidos e deixam métricas zeradas sem aviso.
-- Crescimento de Hoje, Ontem e 7 dias conta posições na lista, não datas: com dias faltando, o período fica errado.
-- Não há coleta diária automática; o histórico só cresce quando se clica em sincronizar.
+- Integração com conta real do Instagram: nomes de métricas, audiência e prazos.
+- `SupabaseStore` contra um Supabase real.
+- Busca de notícias contra o feed real.
+- Alcance do dia atual pode vir com a data deslocada, conforme o `end_time` da Meta.
+- Qualidade dos textos sem IA: frases repetidas entre slides.

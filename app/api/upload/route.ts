@@ -3,9 +3,12 @@ import path from "node:path";
 import { uploadDir, videoPath, VIDEO_EXTS } from "@/lib/videos";
 import { route, bad } from "@/lib/api";
 import { getStore, uid } from "@/lib/store";
+import { uploadProblem } from "@/lib/config";
 
 const MAX = 100 * 1024 * 1024;
 export const POST = route(async (user, req) => {
+  const problem = uploadProblem();
+  if (problem) bad(problem, 501);
   const form = await req.formData();
   const file = form.get("file");
   if (!(file instanceof File)) bad("Envie um arquivo.");
