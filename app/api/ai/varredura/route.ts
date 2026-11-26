@@ -1,6 +1,6 @@
 import { route, loadCtx, bad } from "@/lib/api";
-import { getStore } from "@/lib/store";
-import { charge, refund, COSTS } from "@/lib/credits";
+import { getStore, uid } from "@/lib/store";
+import { withCharge, refund, COSTS } from "@/lib/credits";
 import { genScripts, analyzeTop, type ScriptType, type Pattern } from "@/lib/ai";
 import type { Post } from "@/lib/metrics";
 
@@ -17,8 +17,9 @@ export const POST = route(async (user, req) => {
   const posts = (await store.list("posts", user.id)) as unknown as Post[];
   if (posts.length < 3) bad("Seu perfil ainda não tem posts medidos. Conecte o Instagram e sincronize.");
   const cost = COSTS.varredura(scriptsN);
-  const sweep = await store.insert("sweeps", user.id, { target, dest: b.dest === "criativo" ? "criativo" : "reel", types, theme: String(b.theme ?? ""), analyze, scriptsN, duration: b.duration ?? "variado", status: "rodando", cost, refund: 0 });
-  await charge(user.id, cost, `Varredura do seu perfil`, sweep.id);
+  const sweepId = uid();
+  return withCharge(user.id, cost, `Varredura do seu perfil`, async () => {
+  const sweep = await store.insert("sweeps", user.id, { id: sweepId, target, dest: b.dest === "criativo" ? "criativo" : "reel", types, theme: String(b.theme ?? ""), analyze, scriptsN, duration: b.duration ?? "variado", status: "rodando", cost, refund: 0 });
   const patterns: Pattern[] = analyzeTop(posts, analyze);
   const savedPatterns = [];
   for (const p of patterns) savedPatterns.push(await store.insert("patterns", user.id, { ...p, sweepId: sweep.id }));
@@ -36,4 +37,5 @@ export const POST = route(async (user, req) => {
   if (back > 0) await refund(user.id, back, "Varredura do seu perfil", "A varredura rendeu menos do que o previsto, e a diferença voltou para você.", sweep.id);
   await store.update("sweeps", sweep.id, user.id, { status: "pronto", refund: Math.max(0, back), delivered: out.length });
   return { sweepId: sweep.id, patterns: savedPatterns, scripts: out };
+  }, sweepId);
 });

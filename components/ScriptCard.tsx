@@ -16,7 +16,7 @@ export function ScriptCard({ s, onChange, onToast }: { s: any; onChange: () => v
   const copy = async () => { try { await navigator.clipboard.writeText(fullText(s)); onToast("Roteiro copiado."); } catch { onToast("Não consegui copiar. Selecione o texto e copie.", "err"); } };
   const del = async () => { if (!confirm("Excluir este roteiro?")) return; try { await api(`/api/c/scripts?id=${s.id}`, { method: "DELETE" }); onChange(); } catch (e: any) { onToast(e.message, "err"); } };
   const regen = async () => {
-    try { const [n] = await api("/api/ai/scripts", { body: { type: s.type, dest: s.dest, theme: s.title, count: 1, seconds: s.seconds } }); await api(`/api/c/scripts?id=${s.id}`, { method: "PATCH", body: { title: n.title, hook: n.hook, body: n.body, cta: n.cta } }); onToast("Roteiro refeito. Custou 1 crédito."); onChange(); } catch (e: any) { onToast(e.message, "err"); }
+    try { await api("/api/ai/scripts", { body: { type: s.type, dest: s.dest, theme: s.title, seconds: s.seconds, replaceId: s.id } }); onToast("Roteiro refeito. Custou 1 crédito."); onChange(); } catch (e: any) { onToast(e.message, "err"); }
   };
   const save = async () => { await patch({ title: d.title, hook: d.hook, body: d.body, cta: d.cta }); setEdit(false); onToast("Roteiro salvo."); };
   return (

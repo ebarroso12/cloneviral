@@ -1,14 +1,18 @@
 // Integração oficial com a Instagram Graph API (via Login do Facebook). Usa apenas endpoints públicos e o token do próprio usuário.
 // ATENÇÃO: este módulo precisa de um app Meta próprio (META_APP_ID, META_APP_SECRET) e, para uso por terceiros, App Review.
 import crypto from "node:crypto";
-import { getStore } from "./store";
+import { getStore, scopedId } from "./store";
 
 const V = process.env.META_GRAPH_VERSION || "v21.0";
 const G = `https://graph.facebook.com/${V}`;
 export const metaConfigured = () => !!(process.env.META_APP_ID && process.env.META_APP_SECRET);
 export const SCOPES = ["instagram_basic", "instagram_manage_insights", "instagram_content_publish", "pages_show_list", "pages_read_engagement", "business_management"];
 
-const key = () => crypto.createHash("sha256").update(process.env.RV_SECRET || "dev-secret-change-me").digest();
+const key = () => {
+  const secret = process.env.RV_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") throw new Error("Defina RV_SECRET no servidor para guardar o token do Instagram.");
+  return crypto.createHash("sha256").update(secret || "somente-desenvolvimento-local").digest();
+};
 export function encrypt(text: string) {
   const iv = crypto.randomBytes(12);
   const c = crypto.createCipheriv("aes-256-gcm", key(), iv);
@@ -64,16 +68,16 @@ export async function syncAccount(userId: string) {
     const r = await gj(`${G}/${ig}/insights?metric=reach&period=day&since=${since}&until=${Math.floor(Date.now() / 1000)}&access_token=${token}`);
     for (const v of r.data?.[0]?.values ?? []) {
       const d = String(v.end_time).slice(0, 10);
-      const cur = await store.get("snapshots", `snap_${d}`);
+      const cur = await store.get("snapshots", scopedId(userId, `snap_${d}`));
       if (cur) await store.update("snapshots", cur.id, userId, { reach: v.value });
-      else await store.insert("snapshots", userId, { date: d, followers: prof.followers_count, following: prof.follows_count, mediaCount: prof.media_count, reach: v.value }, `snap_${d}`);
+      else await store.insert("snapshots", userId, { date: d, followers: prof.followers_count, following: prof.follows_count, mediaCount: prof.media_count, reach: v.value }, scopedId(userId, `snap_${d}`));
       if (d === today) reachToday = v.value;
     }
   } catch {}
-  const cur = await store.get("snapshots", `snap_${today}`);
+  const cur = await store.get("snapshots", scopedId(userId, `snap_${today}`));
   const snap = { date: today, followers: prof.followers_count, following: prof.follows_count, mediaCount: prof.media_count, reach: reachToday || cur?.reach || 0 };
   if (cur) await store.update("snapshots", cur.id, userId, snap);
-  else await store.insert("snapshots", userId, snap, `snap_${today}`);
+  else await store.insert("snapshots", userId, snap, scopedId(userId, `snap_${today}`));
 
   // posts (paginado)
   let url: string | null = `${G}/${ig}/media?fields=id,caption,media_type,permalink,timestamp,thumbnail_url,media_url,like_count,comments_count&limit=50&access_token=${token}`;
@@ -93,9 +97,9 @@ export async function syncAccount(userId: string) {
         }
       } catch {}
       const doc = { type: m.media_type, publishedAt: m.timestamp, caption: m.caption ?? "", permalink: m.permalink, thumbnailUrl: m.thumbnail_url ?? m.media_url, views, reach, likes: m.like_count ?? 0, comments: m.comments_count ?? 0, saves, shares };
-      const ex = await store.get("posts", m.id);
-      if (ex) await store.update("posts", m.id, userId, doc);
-      else await store.insert("posts", userId, doc, m.id);
+      const ex = await store.get("posts", scopedId(userId, m.id));
+      if (ex) await store.update("posts", ex.id, userId, doc);
+      else await store.insert("posts", userId, doc, scopedId(userId, m.id));
     }
     url = j.paging?.next ?? null;
     pages++;
@@ -114,7 +118,7 @@ export async function syncAccount(userId: string) {
     const aud = { classifiedTotal: Object.values(age).reduce((a: number, b: any) => a + b, 0), age, gender: { F: gender.F ?? 0, M: gender.M ?? 0, U: gender.U ?? 0 }, countries: rec(demo.country, (x) => x.dimension_values[0]), cities: rec(demo.city, (x) => x.dimension_values[0]) };
     const ex = (await store.list("audience", userId))[0];
     if (ex) await store.update("audience", ex.id, userId, aud);
-    else await store.insert("audience", userId, aud, "aud");
+    else await store.insert("audience", userId, aud, scopedId(userId, "aud"));
   } catch {}
   await store.update("ig_connection", conn.id, userId, { name: prof.name, igUsername: prof.username, bio: prof.biography, link: prof.website, lastSync: new Date().toISOString() });
   return { ok: true };

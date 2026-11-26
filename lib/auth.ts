@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getStore, uid, type Doc } from "./store";
 import { ensureSeed, grantTrial } from "./seed";
+import { signupAllowed, demoEnabled } from "./config";
 import { hashPassword, verifyPassword } from "./password";
 
 const COOKIE = "rv_session";
@@ -15,6 +16,8 @@ export async function signup(name: string, email: string, password: string) {
   email = email.trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error("E-mail inválido.");
   if (password.length < 8) throw new Error("A senha precisa ter ao menos 8 caracteres.");
+  const owner = await store.findOne("users", (u) => !u.demo);
+  if (!signupAllowed(process.env, !!owner)) throw new Error("O cadastro está fechado neste servidor.");
   const exists = await store.findOne("users", (u) => u.email === email);
   if (exists) throw new Error("Já existe uma conta com esse e-mail.");
   const id = uid();
@@ -24,11 +27,22 @@ export async function signup(name: string, email: string, password: string) {
   return id;
 }
 
+// Freio contra tentativa de senha em série: 5 erros bloqueiam o e-mail por 15 minutos (por processo).
+const failures = new Map<string, { n: number; until: number }>();
+
 export async function login(email: string, password: string) {
   await ensureSeed();
+  const key = email.trim().toLowerCase();
+  const f = failures.get(key);
+  if (f && f.n >= 5 && Date.now() < f.until) throw new Error("Muitas tentativas. Espere 15 minutos.");
   const store = getStore();
-  const u = await store.findOne("users", (x) => x.email === email.trim().toLowerCase());
-  if (!u || !verifyPassword(password, u.password)) throw new Error("E-mail ou senha incorretos.");
+  const u = await store.findOne("users", (x) => x.email === key);
+  if (!u || (u.demo && !demoEnabled()) || !verifyPassword(password, u.password)) {
+    const prev = f && Date.now() < f.until ? f.n : 0;
+    failures.set(key, { n: prev + 1, until: Date.now() + 15 * 60000 });
+    throw new Error("E-mail ou senha incorretos.");
+  }
+  failures.delete(key);
   return u.id;
 }
 
@@ -62,6 +76,7 @@ export async function getUser(): Promise<SessionUser | null> {
   const s = await store.findOne("sessions", (x) => x.tokenHash === tokenHash(token));
   if (!s || new Date(s.expiresAt) < new Date()) return null;
   const u = await store.get("users", s.userId);
+  if (u?.demo && !demoEnabled()) return null;
   return (u as SessionUser) ?? null;
 }
 

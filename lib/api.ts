@@ -21,10 +21,9 @@ export function route<T>(fn: (user: SessionUser, req: Request) => Promise<T>) {
 
 export async function loadCtx(userId: string): Promise<Ctx> {
   const s = getStore();
-  const persona = ((await s.get("persona", "persona")) as any) ?? { answers: {} };
   const business = ((await s.list("business", userId))[0] as any) ?? { voice: {} };
   const p = (await s.list("persona", userId))[0] as any;
-  return { persona: (p ?? persona) as Persona, business: business as Business };
+  return { persona: (p ?? { answers: {} }) as Persona, business: business as Business };
 }
 
 export function bad(msg: string, status = 400): never {

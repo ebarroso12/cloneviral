@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getUser } from "@/lib/auth";
 import { exchangeCode, findInstagramAccount, encrypt, syncAccount } from "@/lib/instagram";
-import { getStore } from "@/lib/store";
+import { getStore, scopedId } from "@/lib/store";
 
 export async function GET(req: Request) {
   const origin = process.env.APP_URL || new URL(req.url).origin;
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     const data = { demo: false, token: encrypt(token), igId, pageId, status: "connected", authorizedUntil: new Date(Date.now() + expiresIn * 1000).toISOString(), measuringSince: new Date().toISOString().slice(0, 10) };
     const cur = (await store.list("ig_connection", user.id))[0];
     if (cur?.demo) { for (const c of ["posts", "snapshots", "audience"]) await store.removeAllForUser(c, user.id); }
-    if (cur) await store.update("ig_connection", cur.id, user.id, data); else await store.insert("ig_connection", user.id, data, "conn");
+    if (cur) await store.update("ig_connection", cur.id, user.id, data); else await store.insert("ig_connection", user.id, data, scopedId(user.id, "conn"));
     await syncAccount(user.id);
     return NextResponse.redirect(`${origin}/conexoes?ok=1`);
   } catch (e: any) {

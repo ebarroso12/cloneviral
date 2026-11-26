@@ -1,5 +1,6 @@
 // Dados de demonstração 100% sintéticos (nenhum dado de pessoa real).
-import { getStore, flushStore, uid } from "./store";
+import { getStore, flushStore, uid, scopedId } from "./store";
+import { demoEnabled } from "./config";
 import { hashPassword } from "./password";
 import type { Post, Snap, Audience, PostType } from "./metrics";
 
@@ -21,6 +22,7 @@ export async function grantTrial(userId: string) {
 
 let seeding: Promise<void> | null = null;
 export function ensureSeed() {
+  if (!demoEnabled()) return Promise.resolve();
   seeding ||= doSeed();
   return seeding;
 }
@@ -144,10 +146,10 @@ export async function seedAccount(userId: string) {
     authorizedUntil: new Date(Date.now() + 90 * 86400000).toISOString(),
     measuringSince: snaps[0].date,
     lastSync: new Date().toISOString(),
-  }, "conn");
-  for (const s of snaps) await store.insert("snapshots", userId, s, `snap_${s.date}`);
-  for (const p of posts) await store.insert("posts", userId, p as any, p.id);
-  await store.insert("audience", userId, audience as any, "aud");
+  }, scopedId(userId, "conn"));
+  for (const s of snaps) await store.insert("snapshots", userId, s, scopedId(userId, `snap_${s.date}`));
+  for (const p of posts) await store.insert("posts", userId, p as any, scopedId(userId, p.id));
+  await store.insert("audience", userId, audience as any, scopedId(userId, "aud"));
   await store.insert("persona", userId, {
     answers: {
       cliente: "Mulheres empreendedoras que começaram um negócio e não sabem divulgar.",
@@ -159,7 +161,7 @@ export async function seedAccount(userId: string) {
     document: "Persona de exemplo: empreendedora de 30 a 45 anos, vende serviço, tem pouco tempo e muito receio de se expor.",
     source: "app",
     tunedPct: 100,
-  }, "persona");
+  }, scopedId(userId, "persona"));
   await store.insert("business", userId, {
     name: "Marina Costa",
     brand: "Mentoria Brilho",
@@ -172,6 +174,6 @@ export async function seedAccount(userId: string) {
     channels: { instagram: "@marinacosta.demo", tiktok: "", youtube: "", whatsapp: "", site: "https://marinacosta.example.com" },
     focus: "Gerar inscrições para o encontro online e atrair novas mentoradas.",
     voice: { style: "Simples, direto e acolhedor, frases curtas e perguntas.", reference: "Fala como uma amiga que entende do assunto.", never: "Travessões, termos corporativos, promessas de resultado garantido.", always: "Exemplos do dia a dia e um próximo passo claro.", cta: "Quer caminhar comigo? Acesse o link da bio." },
-  }, "business");
-  await store.insert("editorial_line", userId, { viral: 3, emocional: 3, tecnico: 3 }, "line");
+  }, scopedId(userId, "business"));
+  await store.insert("editorial_line", userId, { viral: 3, emocional: 3, tecnico: 3 }, scopedId(userId, "line"));
 }

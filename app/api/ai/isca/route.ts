@@ -1,6 +1,6 @@
 import { route, loadCtx, bad } from "@/lib/api";
 import { getStore } from "@/lib/store";
-import { charge, COSTS } from "@/lib/credits";
+import { withCharge, COSTS } from "@/lib/credits";
 import { genIsca } from "@/lib/ai";
 
 export const POST = route(async (user, req) => {
@@ -14,7 +14,8 @@ export const POST = route(async (user, req) => {
     if (sc && sc.userId === user.id) source = `${sc.hook} ${sc.body}`;
   }
   const ctx = await loadCtx(user.id);
-  await charge(user.id, COSTS.isca, "Isca de alto valor");
-  const doc = await genIsca(ctx, { keyword, title: b.title, source });
-  return store.insert("lead_magnets", user.id, { keyword: keyword.toUpperCase(), title: doc.title, sections: doc.sections });
+  return withCharge(user.id, COSTS.isca, "Isca de alto valor", async () => {
+    const doc = await genIsca(ctx, { keyword, title: b.title, source });
+    return store.insert("lead_magnets", user.id, { keyword: keyword.toUpperCase(), title: doc.title, sections: doc.sections });
+  });
 });

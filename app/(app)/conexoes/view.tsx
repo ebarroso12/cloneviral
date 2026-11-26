@@ -46,8 +46,8 @@ export default function ConexoesView({ conn, ads, meta, flash }: { conn: any; ad
           <p><b>Somar as visualizações dos seus anúncios</b></p>
           <p className="muted small">Hoje o cartão Visualizações, em Métricas, conta só as suas publicações. Conectando os anúncios, ele passa a mostrar o total, com a parte de publicação e a parte de anúncio separadas logo abaixo.</p>
           <p className="muted small">O app só lê. Ele vê quanto os seus anúncios entregaram e não cria, não pausa e não altera campanha, público ou orçamento nenhum.</p>
-          {ads?.status === "connected" ? <button className="btn danger" onClick={() => run("a", () => api("/api/ads", { body: { action: "disconnect" } }), "Anúncios desconectados.")}>Desconectar anúncios</button> : <button className="btn primary" disabled={busy === "a"} onClick={() => run("a", () => api("/api/ads", { body: { action: "connect" } }), "Anúncios conectados.")}>Conectar anúncios</button>}
-          {!meta && <p className="tiny dim" style={{ marginTop: 10 }}>Modo demonstração: o total de anúncios é simulado.</p>}
+          {!conn?.demo ? <p className="small muted">Ainda não disponível para a sua conta: a leitura dos anúncios não foi implementada, e o app não estima esse número.</p> : ads?.status === "connected" ? <button className="btn danger" onClick={() => run("a", () => api("/api/ads", { body: { action: "disconnect" } }), "Anúncios desconectados.")}>Desconectar anúncios</button> : <button className="btn primary" disabled={busy === "a"} onClick={() => run("a", () => api("/api/ads", { body: { action: "connect" } }), "Anúncios conectados.")}>Conectar anúncios</button>}
+          {conn?.demo && <p className="tiny dim" style={{ marginTop: 10 }}>Conta de demonstração: o total de anúncios é simulado.</p>}
         </div>
       </div>
       {node}

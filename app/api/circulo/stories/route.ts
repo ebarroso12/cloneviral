@@ -1,6 +1,6 @@
 import { route, loadCtx, bad } from "@/lib/api";
 import { getStore } from "@/lib/store";
-import { charge, COSTS } from "@/lib/credits";
+import { withCharge, COSTS } from "@/lib/credits";
 import { applyVoice } from "@/lib/ai";
 
 // Sequência de stories (1 crédito): 5 telas com intenção definida, na voz do negócio.
@@ -9,7 +9,6 @@ export const POST = route(async (user, req) => {
   const goal = String(b.goal ?? "").trim().slice(0, 200);
   if (!goal) bad("Diga o objetivo da sequência.");
   const ctx = await loadCtx(user.id);
-  await charge(user.id, COSTS.roteiro, "Sequência de stories");
   const dor = (ctx.persona.answers.dor || goal).toLowerCase();
   const cta = ctx.business.voice?.cta || "Responda esta mensagem para saber mais.";
   const frames = [
@@ -19,5 +18,5 @@ export const POST = route(async (user, req) => {
     { role: "Prova", text: (ctx.business as any).proof || "Mostre aqui um resultado real ou um print de mensagem (com autorização)." },
     { role: "Convite", text: cta },
   ].map((f) => ({ ...f, text: applyVoice(f.text, ctx.business) }));
-  return getStore().insert("stories", user.id, { goal, frames });
+  return withCharge(user.id, COSTS.roteiro, "Sequência de stories", () => getStore().insert("stories", user.id, { goal, frames }));
 });

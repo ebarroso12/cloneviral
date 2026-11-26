@@ -48,10 +48,32 @@ export class InsufficientCredits extends Error {
 }
 
 /** Debita antes de gerar. Lança InsufficientCredits se faltar saldo. */
-export async function charge(userId: string, amount: number, label: string, refId?: string) {
-  const bal = await balance(userId);
-  if (bal < amount) throw new InsufficientCredits(amount, bal);
-  return getStore().insert("ledger", userId, { at: new Date().toISOString(), kind: "charge", amount: -amount, label, refId });
+export function charge(userId: string, amount: number, label: string, refId?: string) {
+  return exclusive(userId, async () => {
+    const bal = await balance(userId);
+    if (bal < amount) throw new InsufficientCredits(amount, bal);
+    return getStore().insert("ledger", userId, { at: new Date().toISOString(), kind: "charge", amount: -amount, label, refId });
+  });
+}
+
+// Uma cobrança por vez para cada usuário. Vale dentro de um processo do servidor; com várias
+// instâncias contra o Supabase a garantia teria de ser uma função no banco.
+const queues = new Map<string, Promise<unknown>>();
+function exclusive<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const run = (queues.get(key) ?? Promise.resolve()).then(fn, fn);
+  queues.set(key, run.catch(() => {}));
+  return run;
+}
+
+/** Cobra, executa e devolve o crédito se a criação falhar. */
+export async function withCharge<T>(userId: string, amount: number, label: string, fn: () => Promise<T>, refId?: string): Promise<T> {
+  await charge(userId, amount, label, refId);
+  try {
+    return await fn();
+  } catch (e) {
+    await refund(userId, amount, label, "A criação falhou e o crédito voltou para você.", refId);
+    throw e;
+  }
 }
 
 /** Devolve a diferença quando o resultado rende menos que o previsto. */
