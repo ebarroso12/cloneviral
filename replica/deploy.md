@@ -33,6 +33,17 @@ Bloqueios: a criação do projeto Supabase foi negada pela trava de permissões 
 
 A regra de acesso foi provada num Postgres embutido (`e2e/rls.mjs`): com o segredo lê e grava; sem ele, ou com segredo errado, nada. Nunca testada num Supabase real.
 
+## Caminho manual (sem a ferramenta tocar nas contas)
+
+`node scripts/preparar-publicacao.mjs` cria a pasta `publicacao/` (fora do GitHub; contém segredos).
+
+1. supabase.com: novo projeto gratuito `radar-viral`, região São Paulo.
+2. No projeto, SQL Editor: colar todo o `publicacao/1-supabase.sql` e executar.
+3. Em `publicacao/2-vercel.env`, preencher `SUPABASE_URL` e `SUPABASE_ANON_KEY` (Project Settings > API; nunca a chave service_role).
+4. vercel.com, Add New > Project: autorizar o GitHub `ebarroso12`, importar `cloneviral` e colar o conteúdo do `.env` em Environment Variables antes de clicar em Deploy.
+5. Abrir o endereço, ir a `/signup` e usar o `RV_SIGNUP_CODE` do arquivo.
+6. Para o login da Meta, definir depois `APP_URL` com o endereço publicado.
+
 ## Limitações conhecidas num servidor
 - Envio de vídeo responde que não está disponível (falta enviar direto ao Storage).
 - `SupabaseStore` nunca foi exercitado contra um Supabase real.

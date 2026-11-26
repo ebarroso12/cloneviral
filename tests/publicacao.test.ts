@@ -100,3 +100,23 @@ test("PUB-4: coleta não regrava post que não mudou (avança dentro do limite d
   await withFetch(reply, () => syncAccount("p1"));
   assert.equal((await s.list("posts", "p1"))[0].updatedAt, before);
 });
+
+test("PUB-5: o pacote de publicação leva só o resumo do segredo ao banco e não troca chaves já geradas", async () => {
+  const { preparar } = await import("../scripts/preparar-publicacao.mjs");
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), "rv-pacote-"));
+  assert.equal(preparar(process.cwd(), out).criado, true);
+  const env = fs.readFileSync(path.join(out, "2-vercel.env"), "utf8");
+  const sql = fs.readFileSync(path.join(out, "1-supabase.sql"), "utf8");
+  const val = (k: string) => env.match(new RegExp(`^${k}=(.*)$`, "m"))![1];
+  const { createHash } = await import("node:crypto");
+  assert.ok(sql.includes(createHash("sha256").update(val("RV_DB_KEY")).digest("hex")));
+  for (const k of ["RV_DB_KEY", "RV_SECRET", "RV_SIGNUP_CODE", "CRON_SECRET"]) {
+    assert.ok(val(k).length >= 16, k);
+    assert.equal(sql.includes(val(k)), false, k);
+  }
+  assert.match(sql, /create table if not exists app_docs/);
+  assert.match(sql, /app_docs_com_segredo/);
+  assert.equal(preparar(process.cwd(), out).criado, false);
+  assert.equal(fs.readFileSync(path.join(out, "2-vercel.env"), "utf8"), env);
+  assert.match(fs.readFileSync(".gitignore", "utf8"), /^publicacao\/$/m);
+});
