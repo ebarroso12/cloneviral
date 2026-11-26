@@ -6,14 +6,26 @@ import { slideSvg } from "@/lib/slide";
 
 export const FONTS: [string, string][] = [["Moderna", "Inter, system-ui, sans-serif"], ["Editorial", "Georgia, 'Times New Roman', serif"], ["Amigável", "'Trebuchet MS', system-ui, sans-serif"], ["Clássica", "'Palatino Linotype', Georgia, serif"]];
 const PRESETS: [string, string, string, string][] = [["Noite", "#0f172a", "#f8fafc", "#38bdf8"], ["Areia", "#fdf6ec", "#2b2118", "#e76f51"], ["Floresta", "#052e2b", "#ecfdf5", "#34d399"], ["Ameixa", "#3b0764", "#faf5ff", "#e879f9"], ["Rosa", "#fff1f2", "#4c0519", "#e11d48"]];
-const STEPS = ["Nome", "Cores", "Fonte", "Tom", "Revisar"];
+const STEPS = ["Marca", "Cores", "Fonte", "Logo e tom", "Revisar"];
 
 export default function IdentidadeView({ initial }: { initial: any }) {
   const { toast, node } = useToast();
   const [step, setStep] = useState(0);
   const [k, setK] = useState<any>(initial ?? { name: "", bg: "#0f172a", fg: "#f8fafc", accent: "#38bdf8", font: FONTS[0][1], tone: "acolhedor", applied: false });
   const [saved, setSaved] = useState(!!initial);
-  const look = { bg: k.bg, fg: k.fg, accent: k.accent, muted: k.fg + "aa", font: k.font };
+  const look = { bg: k.bg, fg: k.fg, accent: k.accent, muted: k.fg + "aa", font: k.font, logo: k.logo };
+  // reduz o logo no navegador para no máximo 400 px, mantendo a transparência
+  const pickLogo = async (file: File) => {
+    try {
+      if (!/^image\/(png|jpeg)$/.test(file.type)) throw new Error("Use um logo PNG ou JPEG.");
+      const img = await createImageBitmap(file);
+      const r = Math.min(1, 400 / Math.max(img.width, img.height));
+      const cv = document.createElement("canvas");
+      cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r);
+      cv.getContext("2d")!.drawImage(img, 0, 0, cv.width, cv.height);
+      setK((cur: any) => ({ ...cur, logo: cv.toDataURL("image/png") }));
+    } catch (e: any) { toast(e.message || "Não consegui ler esse logo.", "err"); }
+  };
   const svg = slideSvg({ role: "capa", title: k.name || "Seu nome aqui", text: "" }, 0, 7, look, k.name ? "@" + k.name.toLowerCase().replace(/\s+/g, "") : "");
   const save = async (applied: boolean) => { try { await api("/api/c/brand_kit", { body: { ...k, applied } }); setK({ ...k, applied }); setSaved(true); toast(applied ? "Identidade aplicada aos próximos carrosséis." : "Identidade salva."); } catch (e: any) { toast(e.message, "err"); } };
   const contrast = (a: string, b: string) => { const l = (h: string) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0); }; const [x, y] = [l(a), l(b)]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
@@ -31,6 +43,7 @@ export default function IdentidadeView({ initial }: { initial: any }) {
             <p className={"small " + (cr >= 4.5 ? "" : "err")}>Contraste texto e fundo: {cr.toFixed(1)}:1 {cr >= 4.5 ? "(legível)" : "(baixo: o texto pode ficar difícil de ler)"}</p>
           </>}
           {step === 2 && <div className="field"><label>Fonte</label><div className="chips">{FONTS.map(([n, f]) => <button key={n} className="chip" style={{ fontFamily: f }} aria-pressed={k.font === f} onClick={() => setK({ ...k, font: f })}>{n}</button>)}</div></div>}
+          {step === 3 && <div className="field"><label htmlFor="logo">Logo (PNG ou JPEG, opcional)</label><input id="logo" type="file" accept="image/png,image/jpeg" onChange={(e) => e.target.files?.[0] && pickLogo(e.target.files[0])} />{k.logo && <button type="button" className="btn sm" onClick={() => setK({ ...k, logo: null })}>Remover logo</button>}</div>}
           {step === 3 && <div className="field"><label>Tom dos textos</label><div className="chips">{["acolhedor", "direto", "técnico", "provocador"].map((t) => <button key={t} className="chip" aria-pressed={k.tone === t} onClick={() => setK({ ...k, tone: t })}>{t}</button>)}</div></div>}
           {step === 4 && <><p>Tudo certo? A pré-visualização ao lado é a capa dos seus carrosséis.</p><div className="row wrap"><button className="btn primary" onClick={() => save(true)}>Aplicar identidade</button><button className="btn" onClick={() => save(false)}>Só salvar</button>{k.applied && <button className="btn danger" onClick={() => save(false)}>Parar de aplicar</button>}</div></>}
           <div className="row" style={{ marginTop: 16 }}>{step > 0 && <button className="btn" onClick={() => setStep(step - 1)}>Voltar</button>}{step < 4 && <button className="btn primary" onClick={() => setStep(step + 1)}>Continuar</button>}</div>

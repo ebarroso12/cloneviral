@@ -65,3 +65,11 @@ test("Ideia vira roteiro: cobra 1, grava o roteiro e move a ideia", async () => 
   assert.equal(after!.scriptId, script.id);
   await assert.rejects(() => ideaToScript("outra", idea.id), /não encontrada/i);
 });
+
+test("Logo da identidade visual entra nos slides; endereço externo é ignorado", async () => {
+  const { slideSvg } = await import("../lib/slide");
+  const s = { role: "capa", title: "t", text: "" };
+  const png = "data:image/png;base64,iVBORw0KGgo=";
+  for (const i of [0, 1]) assert.ok(slideSvg(s, i, 3, { ...look, logo: png }).includes(`href="${png}"`));
+  assert.equal(slideSvg(s, 0, 3, { ...look, logo: "https://exemplo.test/x.png" }).includes("<image"), false);
+});

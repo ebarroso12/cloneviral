@@ -13,7 +13,7 @@ const NAV: { phase?: string; n?: number; ex?: boolean; items: { href: string; la
   { phase: "EXCLUSIVOS", ex: true, items: [{ href: "/meu-perfil-pronto", label: "Perfil Pronto", ic: "★" }, { href: "/circulo-dos-100", label: "Círculo dos 100", ic: "◌" }] },
 ];
 
-export default function Shell({ user, credits, planName, total, children }: { user: { name: string; email: string }; credits: number; planName: string; total: number; children: React.ReactNode }) {
+export default function Shell({ handle, user, credits, planName, total, children }: { handle?: string; user: { name: string; email: string }; credits: number; planName: string; total: number; children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -54,11 +54,12 @@ export default function Shell({ user, credits, planName, total, children }: { us
               <div className="pop" ref={pop} role="menu">
                 <b>{user.name}</b><div className="muted small">{user.email}</div>
                 <hr />
-                <Link href="/meu-plano" className="nav-item" role="menuitem">👑 {planName}</Link>
+                <Link href="/meu-plano" className="nav-item" role="menuitem"><span aria-hidden>👑 </span>{planName}</Link>
                 <div className="small muted" style={{ margin: "4px 12px 8px" }}>{credits} de {total} créditos disponíveis</div>
                 <div style={{ margin: "0 12px 8px" }}><div className="bar"><i style={{ width: pct + "%" }} /></div></div>
+                {handle && <a className="nav-item" role="menuitem" href={`https://www.instagram.com/${encodeURIComponent(handle)}/`} target="_blank" rel="noreferrer">Ver o meu perfil</a>}
                 <Link href="/meu-plano" className="nav-item" role="menuitem">Meu plano</Link>
-                <button className="nav-item" style={{ width: "100%", background: "none", color: "inherit", font: "inherit", textAlign: "left", cursor: "pointer" }} role="menuitem" onClick={async () => { await api("/api/auth/logout", { method: "POST", body: {} }); router.push("/login"); router.refresh(); }}>↪ Sair</button>
+                <button className="nav-item" style={{ width: "100%", background: "none", color: "inherit", font: "inherit", textAlign: "left", cursor: "pointer" }} role="menuitem" onClick={async () => { await api("/api/auth/logout", { method: "POST", body: {} }); router.push("/login"); router.refresh(); }}><span aria-hidden>↪ </span>Sair</button>
               </div>
             )}
           </div>

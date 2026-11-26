@@ -150,6 +150,12 @@ def configurar(page):
     assert page.get_by_text("Dra. Ágata").first.is_visible()
     ir(page, "identidade-visual")
     page.locator("#n").fill("Ágata")
+    import base64
+    page.get_by_role("button", name="4. Logo e tom").click()
+    png = page.evaluate("(() => { const c = document.createElement('canvas'); c.width = 120; c.height = 120; c.getContext('2d').fillRect(10, 10, 90, 90); return c.toDataURL('image/png').split(',')[1]; })()")
+    page.locator("#logo").set_input_files({"name": "l.png", "mimeType": "image/png", "buffer": base64.b64decode(png)})
+    page.get_by_role("button", name="Remover logo").wait_for()
+    page.locator("svg image").first.wait_for(state="attached")
     page.get_by_role("button", name="5. Revisar").click()
     page.get_by_role("button", name="Aplicar identidade").click()
     page.get_by_text("Identidade aplicada aos próximos carrosséis.").wait_for()
@@ -279,7 +285,7 @@ def circulo(page):
     ir(page, "circulo-dos-100/raio-x")
     page.get_by_role("button", name="Raio-X do perfil · 2 créditos").click()
     page.get_by_text("Raio-X do perfil pronto.").wait_for()
-    page.get_by_text("Destaques", exact=True).wait_for()
+    page.get_by_text("Destaques", exact=True).last.wait_for()
     ir(page, "circulo-dos-100/lazastory")
     page.locator("#g").fill("convidar para a avaliação")
     page.get_by_role("button", name="Criar sequência · 1 crédito").click()
@@ -351,6 +357,88 @@ def movel(page):
     assert not ruins, ", ".join(ruins)
 
 
+@caso("S09 abrir, editar, copiar, teleprompter, já gravei e excluir roteiro")
+def acoes_roteiro(page):
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=BASE)
+    ir(page, "roteiro")
+    n = len(api(page, "GET", "/api/c/scripts")[1])
+    page.get_by_role("button", name="Abrir", exact=True).first.click()
+    page.get_by_text("CTA:").first.wait_for()
+    page.get_by_role("button", name="Editar").first.click()
+    page.locator(".field input").nth(1).wait_for()
+    campo = page.locator("div.field", has=page.locator("label", has_text="Título")).locator("input").first
+    campo.fill("título editado")
+    page.get_by_role("button", name="Salvar").click()
+    page.get_by_text("Roteiro salvo.").wait_for()
+    page.get_by_role("heading", name="título editado").wait_for()
+    page.get_by_role("button", name="Copiar").first.click()
+    page.get_by_text("Roteiro copiado.").wait_for()
+    assert "Gancho:" in page.evaluate("navigator.clipboard.readText()")
+    page.get_by_role("button", name="Teleprompter").first.click()
+    page.get_by_role("dialog", name="Teleprompter").wait_for()
+    page.keyboard.press("Escape")
+    page.get_by_role("button", name="Já gravei").first.click()
+    page.get_by_role("button", name="Desmarcar gravado").first.wait_for()
+    page.get_by_role("button", name="Excluir").first.click()
+    page.wait_for_timeout(1500)
+    assert len(api(page, "GET", "/api/c/scripts")[1]) == n - 1
+
+
+@caso("S08 arrastar ideia entre colunas")
+def arrastar(page):
+    api(page, "POST", "/api/c/ideas", {"text": "cartão arrastado", "status": "ideia"})
+    ir(page, "ideias")
+    page.locator(".idea", has_text="cartão arrastado").drag_to(page.locator(".col[aria-label='Gravado']"))
+    page.locator(".col[aria-label='Gravado'] .idea", has_text="cartão arrastado").wait_for()
+
+
+@caso("S11 catálogo com 100 modelos em 13 categorias")
+def catalogo(page):
+    ir(page, "carrossel")
+    page.get_by_role("button", name="Escolher entre 100 modelos").click()
+    chips = page.get_by_role("dialog").locator(".chips .chip")
+    assert chips.count() == 13, chips.count()
+    total = sum(int(re.search(r"\((\d+)\)", t).group(1)) for t in chips.all_inner_texts())
+    assert total == 100, total
+    page.get_by_role("dialog").locator("button.card").first.click()
+    page.get_by_role("button", name=re.compile("slides$")).wait_for()
+
+
+@caso("S13 isca a partir de roteiro colado e S16 linha editorial persiste")
+def isca_colada(page):
+    ir(page, "isca")
+    page.get_by_role("button", name="Colar um roteiro").click()
+    page.locator("#tx").fill("roteiro colado sobre sono reparador")
+    page.locator("#k").fill("SONO")
+    page.get_by_role("button", name="Criar isca · 3 créditos").click()
+    page.get_by_text("Isca criada.").wait_for()
+    assert "sono reparador" in json.dumps(api(page, "GET", "/api/c/lead_magnets")[1], ensure_ascii=False)
+    ir(page, "planejador-editorial")
+    page.get_by_role("button", name="Mais Virais").click()
+    page.wait_for_timeout(1000)
+    ir(page, "planejador-editorial")
+    assert page.get_by_text(re.compile(r"/ 4$")).is_visible()
+
+
+@caso("S02/S20 menu da conta, desconectar e sair")
+def sair(page):
+    ir(page, "metricas")
+    page.get_by_role("button", name=re.compile("^Conta:")).click()
+    assert page.get_by_role("menuitem", name="Ver o meu perfil").get_attribute("href") == "https://www.instagram.com/marinacosta.demo/"
+    ir(page, "conexoes")
+    page.get_by_role("button", name="Desconectar", exact=True).click()
+    page.get_by_text("Instagram desconectado.").wait_for()
+    assert len(api(page, "GET", "/api/c/posts")[1]) > 0, "desconectar apagou o histórico"
+    page.get_by_role("button", name=re.compile("^Conta:")).click()
+    perfil = page.get_by_role("menuitem", name="Ver o meu perfil")
+    assert perfil.count() == 0 or perfil.get_attribute("href").startswith("https://www.instagram.com/")
+    for t in ["Meu plano", "Sair"]:
+        page.get_by_role("menuitem", name=t, exact=True).wait_for()
+    page.get_by_role("menuitem", name="Sair").click()
+    page.wait_for_url("**/login")
+    assert api(page, "GET", "/api/metrics")[0] == 401
+
+
 @caso("SEG-1 primeiro dono não vê a demonstração; segundo cadastro é recusado")
 def isolamento(browser, demo):
     alheio = api(demo, "GET", "/api/c/scripts")[1][0]["id"]
@@ -397,8 +485,12 @@ with sync_playwright() as pw:
         api(pagina, "POST", "/api/credits", {})
     for f in [serie, circulo, planejar, video, telas, movel]:
         f(pagina)
-    esperados = len(problemas)
+    for _ in range(2):
+        api(pagina, "POST", "/api/credits", {})
+    for f in [acoes_roteiro, arrastar, catalogo, isca_colada]:
+        f(pagina)
     isolamento(nav, pagina)
+    sair(pagina)
     forca_bruta(nav)
     nav.close()
 

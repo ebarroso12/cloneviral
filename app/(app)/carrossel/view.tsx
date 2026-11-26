@@ -36,7 +36,7 @@ export default function CarrosselView({ list, kit, patterns, models, cats, handl
   const byCat = useMemo(() => models.filter((m: any) => m.category === cat), [models, cat]);
   const lookFor = (c: any): Look => {
     const m = models.find((x: any) => x.id === c.modelId);
-    if (c.brandApplied && kit) return { bg: kit.bg, fg: kit.fg, accent: kit.accent, muted: kit.fg + "aa", font: kit.font };
+    if (c.brandApplied && kit) return { bg: kit.bg, fg: kit.fg, accent: kit.accent, muted: kit.fg + "aa", font: kit.font, logo: kit.logo };
     return m ? { ...m.palette, font: m.font } : { bg: "#0f172a", fg: "#f8fafc", accent: "#38bdf8", muted: "#94a3b8", font: "Inter, system-ui, sans-serif" };
   };
   const go = async () => {
