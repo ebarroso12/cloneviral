@@ -51,3 +51,12 @@ Também ajustado sem teste que o reproduzisse: a versão padrão da API da Meta 
 - Qualidade dos textos sem IA: frases repetidas entre slides.
 
 BUG-024 a BUG-033 vieram de uma revisão independente do código.
+
+## Preparação para publicar
+
+| ID | sev | defeito | como foi reproduzido | situação |
+| --- | --- | --- | --- | --- |
+| BUG-035 | S1 | num endereço público, o primeiro estranho a se cadastrar virava o dono | teste PUB-1 | corrigido: código de cadastro |
+| BUG-036 | S2 | falha ao apagar no banco externo era ignorada | teste PUB-2 | corrigido |
+| BUG-037 | S2 | cada coleta regravava todos os posts e podia nunca chegar aos antigos | teste PUB-4 | corrigido |
+| BUG-038 | S3 | regra de acesso do banco dava erro com cabeçalho vazio | prova em Postgres embutido | corrigido |

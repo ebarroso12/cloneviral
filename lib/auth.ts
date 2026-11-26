@@ -11,13 +11,13 @@ const SESSION_DAYS = 30;
 
 const tokenHash = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
 
-export async function signup(name: string, email: string, password: string) {
+export async function signup(name: string, email: string, password: string, code = "") {
   const store = getStore();
   email = email.trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error("E-mail inválido.");
   if (password.length < 8) throw new Error("A senha precisa ter ao menos 8 caracteres.");
   const owner = await store.findOne("users", (u) => !u.demo);
-  if (!signupAllowed(process.env, !!owner)) throw new Error("O cadastro está fechado neste servidor.");
+  if (!signupAllowed(process.env, !!owner, code)) throw new Error(!owner && process.env.RV_SIGNUP_CODE ? "Código de cadastro incorreto." : "O cadastro está fechado neste servidor.");
   const exists = await store.findOne("users", (u) => u.email === email);
   if (exists) throw new Error("Já existe uma conta com esse e-mail.");
   const id = uid();

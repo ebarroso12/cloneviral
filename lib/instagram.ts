@@ -175,7 +175,9 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
       const id = scopedId(userId, m.id);
       const doc = { type: m.media_type, publishedAt: m.timestamp, caption: m.caption ?? "", permalink: m.permalink, thumbnailUrl: m.thumbnail_url ?? m.media_url, likes: m.like_count ?? 0, comments: m.comments_count ?? 0 };
       const ex = known.get(id);
-      const saved = ex ? await store.update("posts", id, userId, doc) : await store.insert("posts", userId, { ...doc, views: 0, reach: 0, saves: 0, shares: 0 }, id);
+      // endereço de imagem da Meta muda a cada leitura; sozinho não justifica regravar
+      const unchanged = ex && (["type", "publishedAt", "caption", "permalink", "likes", "comments"] as const).every((k) => ex[k] === doc[k]) && !!ex.thumbnailUrl === !!doc.thumbnailUrl;
+      const saved = unchanged ? ex : ex ? await store.update("posts", id, userId, doc) : await store.insert("posts", userId, { ...doc, views: 0, reach: 0, saves: 0, shares: 0 }, id);
       known.set(id, saved!);
       seen.push({ mediaId: m.id, id });
     }
@@ -199,7 +201,8 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
           const field = ({ reach: "reach", views: "views", saved: "saves", shares: "shares" } as Record<string, string>)[x.name];
           if (field && typeof v === "number") patch[field] = v;
         }
-        await store.update("posts", p.id, userId, patch);
+        const old = known.get(p.id)!;
+        if (!old.insightsAt || Object.keys(patch).some((k) => k !== "insightsAt" && patch[k] !== old[k])) await store.update("posts", p.id, userId, patch);
       } catch (e) {
         if (e instanceof MetaError && e.code === 190) throw e;
         warn("Métricas de posts", e);

@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { storageProblem } from "./config";
+import { storageProblem, supabaseConfig } from "./config";
 
 export type Doc = { id: string; userId: string; createdAt: string; updatedAt: string; [k: string]: any };
 
@@ -137,10 +137,10 @@ export class FileStore implements Store {
 
 const q = encodeURIComponent;
 
-class SupabaseStore implements Store {
-  constructor(private url: string, private key: string) {}
+export class SupabaseStore implements Store {
+  constructor(private url: string, private key: string, private dbKey?: string) {}
   private h(extra: Record<string, string> = {}) {
-    return { apikey: this.key, Authorization: `Bearer ${this.key}`, "Content-Type": "application/json", ...extra };
+    return { apikey: this.key, Authorization: `Bearer ${this.key}`, "Content-Type": "application/json", ...(this.dbKey ? { "x-rv-key": this.dbKey } : {}), ...extra };
   }
   private rowToDoc(r: any): Doc {
     return { ...r.data, id: r.id, userId: r.user_id, createdAt: r.created_at, updatedAt: r.updated_at };
@@ -184,10 +184,12 @@ class SupabaseStore implements Store {
   }
   async remove(c: string, id: string, userId: string) {
     const res = await fetch(`${this.url}/rest/v1/app_docs?collection=eq.${q(c)}&id=eq.${q(id)}&user_id=eq.${q(userId)}`, { method: "DELETE", headers: this.h() });
-    return res.ok;
+    if (!res.ok) throw new Error(`supabase delete ${res.status}`);
+    return true;
   }
   async removeAllForUser(c: string, userId: string) {
-    await fetch(`${this.url}/rest/v1/app_docs?collection=eq.${q(c)}&user_id=eq.${q(userId)}`, { method: "DELETE", headers: this.h() });
+    const res = await fetch(`${this.url}/rest/v1/app_docs?collection=eq.${q(c)}&user_id=eq.${q(userId)}`, { method: "DELETE", headers: this.h() });
+    if (!res.ok) throw new Error(`supabase delete ${res.status}`);
   }
   async findOne(c: string, predicate: (d: Doc) => boolean) {
     // usado só em users/sessions: coleções pequenas
@@ -205,9 +207,8 @@ export function getStore(): Store {
   if (g.__store) return g.__store;
   const problem = storageProblem();
   if (problem) throw new Error(problem);
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  g.__store = url && key ? new SupabaseStore(url, key) : new FileStore(path.join(dataDir(), "db.json"));
+  const db = supabaseConfig();
+  g.__store = db ? new SupabaseStore(db.url, db.key, db.dbKey) : new FileStore(path.join(dataDir(), "db.json"));
   return g.__store;
 }
 export function flushStore() {
