@@ -1,0 +1,75 @@
+feature,area,priority,original,clone,notes
+Menu lateral em 4 fases numeradas + Exclusivos,navegação,must,yes,no,vira dialog no mobile
+Menu da conta (perfil; trial e créditos; Meu plano; Sair),conta,must,yes,no,
+Login e cadastro por e-mail,conta,must,yes,no,original não testado: só vi sessão ativa
+Conectar Instagram via OAuth Meta (conta profissional),conexões,must,yes,no,autorização 90 dias
+Renovar autorização / trocar Página sem apagar histórico,conexões,must,yes,no,
+Desconectar Instagram,conexões,must,yes,no,
+Mostrar "medindo desde" e dias medidos,conexões,should,yes,no,
+Conectar Anúncios Meta (só leitura) para somar visualizações pagas,conexões,could,yes,no,cartão passa a separar publicação e anúncio
+Sincronização do perfil e posts (última sincronização exibida),métricas,must,yes,no,job periódico
+Cartão do perfil (foto; nome; @; bio; link; status Conectado),métricas,must,yes,no,
+KPI Seguidores,métricas,must,yes,no,última coleta
+KPI Visualizações (orgânico vida inteira) + tooltip,métricas,must,yes,no,desde 02/06/2021 no original
+KPI Seguindo,métricas,must,yes,no,
+KPI Publicações,métricas,must,yes,no,
+Filtro de período Hoje/Ontem/7 dias/30 dias,métricas,must,yes,no,vale só para crescimento e alcance diário
+Crescimento de seguidores (delta + sparkline acessível),métricas,must,yes,no,
+Alcance diário (sparkline acessível),métricas,must,yes,no,
+Aviso de dias não medidos nas séries,métricas,should,yes,no,
+Engajamento real (interações ÷ alcance),métricas,must,yes,no,fórmula verificada
+Sobre seguidores (interações médias ÷ seguidores),métricas,must,yes,no,fórmula verificada
+Alcance sobre seguidores,métricas,must,yes,no,fórmula verificada
+Alcance total e Interações totais,métricas,must,yes,no,
+Barra "faixa saudável 3% a 6%" com mensagem,métricas,must,yes,no,
+Nota de Autenticidade 0-100 (3 sinais: 44/30/26) + tooltip,métricas,must,yes,no,terceiro sinal é hipótese
+Ações urgentes ordenadas por ganho de pontos,métricas,must,yes,no,vazio quando nenhum sinal baixo
+Interações por tipo (Imagem/Reels/Carrossel) com 4 quebras,métricas,must,yes,no,
+Faixa etária dos seguidores,métricas,must,yes,no,recorte da Meta
+Gênero dos seguidores,métricas,must,yes,no,
+Países (contagem e %),métricas,must,yes,no,
+Cidades (contagem e %),métricas,must,yes,no,
+Nota explicando recorte vs total de seguidores,métricas,should,yes,no,
+Top 12 posts com seletor de 6 métricas,métricas,must,yes,no,
+Modal do post com Abrir no Instagram,métricas,should,yes,no,
+Tabela Últimos posts (9 colunas; todos os posts),métricas,must,yes,no,virtualizar
+Persona: perguntas; documento e % afinada,configurar,must,yes,no,custa 8 créditos
+Persona criada pela equipe (Perfil Pronto) não muda ao editar,configurar,could,yes,no,
+Meu Negócio: 7 partes editáveis + % afinado,configurar,must,yes,no,
+Identidade Visual: wizard 5 passos com prévia,configurar,must,yes,no,
+Aplicar identidade visual aos carrosséis,configurar,must,yes,no,
+Varredura: alvo (meu perfil/um perfil/meu nicho/um conteúdo),planejar,must,yes,no,só "meu perfil" tem dado completo
+Varredura: destino (Reel/Criativo) e tipo (Viral/Emocional/Técnico),planejar,must,yes,no,
+Varredura: quantos analisar/gerar e duração,planejar,must,yes,no,
+Varredura: tema opcional que sobrepõe o assunto,planejar,should,yes,no,
+Varredura: lista de varreduras e padrões salvos,planejar,must,yes,no,
+Varredura: reembolso quando rende menos que o previsto,planejar,should,yes,no,
+Sugestão de perfis (12 créditos),planejar,could,yes,no,
+Notícias: assuntos + Buscar agora + artigo pronto,planejar,should,yes,no,preço por busca
+Ideias: kanban 4 colunas com arrastar,planejar,must,yes,no,
+Ideia vira roteiro,planejar,should,yes,no,
+Roteiro: cartão com tipo/destino/duração/gancho,criar,must,yes,no,1 crédito
+Roteiro: Abrir/Editar/Copiar/Teleprompter/Já gravei/PDF/Regenerar/Excluir,criar,must,yes,no,
+Carrossel: escrever slides; aprovar; depois desenhar 1080x1440,criar,must,yes,no,2 créditos
+Carrossel: usar padrão da Varredura e idioma,criar,should,yes,no,
+Carrossel: 100 modelos em 13 categorias,criar,must,yes,no,criar catálogo próprio
+Carrossel: foto própria na capa (PNG/JPEG) sem custo,criar,should,yes,no,
+Carrossel: imagem por IA,criar,could,yes,skip,indisponível no original também
+Carrossel: lista de carrosséis salvos,criar,must,yes,no,
+Série: tema em N capítulos (2 + 1 por capítulo),criar,must,yes,no,
+Isca de Alto Valor: colar/banco/padrão + palavra-chave + PDF,criar,must,yes,no,3 créditos; entrega no direct fica fora
+CopyCut,criar,could,no,skip,Em breve no original
+Planejador: calendário mensal com agendamentos,publicar,must,yes,no,
+Planejador: linha editorial (Viral/Emocional/Técnico por mês),publicar,must,yes,no,
+Planejador: vídeos guardados + upload MP4/MOV 100 MB 3 min,publicar,must,yes,no,
+Planejador: publicar como Reels no horário marcado,publicar,must,yes,no,Graph API content publishing
+Perfil Pronto (documento entregue pela equipe),exclusivos,could,yes,skip,conteúdo e equipe do dono
+Círculo dos 100: hub com 4 ferramentas,exclusivos,could,yes,no,
+Sala de Análise de vídeo (resposta em até 3 dias),exclusivos,could,yes,no,
+Raio-X do Perfil (6 partes),exclusivos,could,yes,no,
+LazaStory (assistente de Stories),exclusivos,could,yes,no,visto só de relance
+32 roteiros prontos,exclusivos,could,yes,skip,conteúdo do original
+Meu plano: cota; custos; extrato (cobrado/devolvido/usado),plano,must,yes,no,
+Trial 30 dias com 30 créditos; START 100 créditos/mês,plano,must,yes,no,preço próprio
+Comprar mais créditos e gerenciar assinatura,plano,must,yes,no,checkout próprio
+Débito de crédito na criação e estorno parcial,plano,must,yes,no,ledger imutável
