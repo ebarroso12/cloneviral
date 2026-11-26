@@ -70,4 +70,5 @@ Ordem definida pelo dono: recon, architect, design, build, backend, test, diff, 
 - O original é lido só pela conta autorizada do dono, no navegador dele, sem crawler, bundle JS ou captura de rede. `replica/screens/` nunca vai para o git.
 - O repositório é público: nada de credencial real nem dado pessoal.
 - Deploy em produção só com autorização explícita.
+- A Vercel publica a partir da cópia `edsonbdados-Bancodados/cloneviral`: o `origin` tem dois endereços de envio; conferir que os dois receberam. Enviar para a `main` publica no site.
 - Pode haver outra sessão enviando commits para a `main`: fazer `git pull` antes de editar e antes de enviar.

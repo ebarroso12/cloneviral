@@ -2,7 +2,7 @@
 
 Data: 26/11/2026. **Publicado** em https://cloneviral-iota.vercel.app (Vercel, time `edsonbdados-9184`, projeto `cloneviral`, região gru1). Banco: Supabase `wwflyczpnizlmnzczqsl`.
 
-Atenção: o projeto da Vercel está ligado à cópia `edsonbdados-Bancodados/cloneviral`, não a `ebarroso12/cloneviral`. Envio para o repositório do dono não publica sozinho.
+Atenção: o projeto da Vercel está ligado à cópia `edsonbdados-Bancodados/cloneviral`, não a `ebarroso12/cloneviral`. A conta `ebarroso12` é colaboradora da cópia e o `git push origin` do computador do dono grava nas duas.
 
 ## Provas no endereço público
 - `SupabaseStore` contra o banco real: gravar, ler, buscar, alterar e apagar; com segredo errado ou sem segredo, nada.

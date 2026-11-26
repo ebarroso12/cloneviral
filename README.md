@@ -2,6 +2,17 @@
 
 Painel de métricas e máquina de conteúdo para Instagram, reconstruído a partir do mapeamento funcional de um app de referência (`replica/recon.md`). Clean-room: funções e fluxos, sem código, textos, marca ou arte do original.
 
+## No ar
+
+https://cloneviral-iota.vercel.app (Vercel + Supabase, ver `replica/deploy.md`).
+
+A Vercel lê a cópia `edsonbdados-Bancodados/cloneviral`. Neste computador, o `git push origin` grava nas duas. Em um clone novo:
+
+```bash
+git remote set-url --add --push origin https://github.com/ebarroso12/cloneviral.git
+git remote set-url --add --push origin https://github.com/edsonbdados-Bancodados/cloneviral.git
+```
+
 ## Abrir no computador
 
 Dê dois cliques em **`Abrir Radar Viral.cmd`**. Na primeira vez ele constrói o app (alguns minutos) e abre `http://localhost:3000`. Só este computador acessa.
