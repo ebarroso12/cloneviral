@@ -37,9 +37,9 @@ export default function Shell({ user, credits, planName, total, children }: { us
           <div key={gi}>
             {g.phase && <div className={"phase" + (g.ex ? " ex" : "")}>{g.n ? <i>{g.n}</i> : <i>★</i>}{g.phase}</div>}
             {g.items.map((it) => it.soon ? (
-              <div key={it.label} className="nav-item soon" aria-disabled="true"><span className="ic">{it.ic}</span>{it.label}<span className="badge">Em breve</span></div>
+              <div key={it.label} className="nav-item soon" aria-disabled="true"><span className="ic" aria-hidden>{it.ic}</span>{it.label}<span className="badge">Em breve</span></div>
             ) : (
-              <Link key={it.href} href={it.href} className={"nav-item" + (path === it.href || path.startsWith(it.href + "/") ? " active" : "")}><span className="ic">{it.ic}</span>{it.label}</Link>
+              <Link key={it.href} href={it.href} className={"nav-item" + (path === it.href || path.startsWith(it.href + "/") ? " active" : "")}><span className="ic" aria-hidden>{it.ic}</span>{it.label}</Link>
             ))}
           </div>
         ))}

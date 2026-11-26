@@ -15,6 +15,8 @@ export interface Store {
   remove(collection: string, id: string, userId: string): Promise<boolean>;
   removeAllForUser(collection: string, userId: string): Promise<void>;
   findOne(collection: string, predicate: (d: Doc) => boolean): Promise<Doc | null>;
+  /** Atravessa contas: só para rotinas do servidor, nunca para responder a um usuário. */
+  findAll(collection: string, predicate: (d: Doc) => boolean): Promise<Doc[]>;
 }
 
 const now = () => new Date().toISOString();
@@ -114,6 +116,9 @@ export class FileStore implements Store {
   async findOne(c: string, predicate: (d: Doc) => boolean) {
     return Object.values(this.col(c)).find(predicate) ?? null;
   }
+  async findAll(c: string, predicate: (d: Doc) => boolean) {
+    return Object.values(this.col(c)).filter(predicate);
+  }
 }
 
 const q = encodeURIComponent;
@@ -174,6 +179,10 @@ class SupabaseStore implements Store {
     // usado só em users/sessions: coleções pequenas
     const rows = await this.page(`collection=eq.${q(c)}`);
     return rows.map((r) => this.rowToDoc(r)).find(predicate) ?? null;
+  }
+  async findAll(c: string, predicate: (d: Doc) => boolean) {
+    const rows = await this.page(`collection=eq.${q(c)}`);
+    return rows.map((r) => this.rowToDoc(r)).filter(predicate);
   }
 }
 

@@ -100,17 +100,20 @@ export function computeMetrics(posts: Post[], snaps: Snap[], audience: Audience 
   const bandStatus: "abaixo" | "dentro" | "acima" = engagementReal < band[0] ? "abaixo" : engagementReal > band[1] ? "acima" : "dentro";
 
   // ---- séries e crescimento por período ----
-  const idx = sorted.length - 1;
-  const at = (i: number) => sorted[Math.max(0, i)]?.followers ?? 0;
+  const lastDate = last?.date ?? "";
+  const back = (days: number) => (lastDate ? addDays(lastDate, -days) : "");
+  // seguidores na coleta mais recente até a data; antes da primeira coleta, vale a primeira
+  const followersAt = (date: string) => ([...sorted].reverse().find((s) => s.date <= date) ?? sorted[0])?.followers ?? 0;
   const growth =
-    period === "hoje" ? at(idx) - at(idx - 1) : period === "ontem" ? at(idx - 1) - at(idx - 2) : period === "7d" ? at(idx) - at(idx - 7) : at(idx) - at(0 > idx - 30 ? 0 : idx - 30);
+    period === "ontem" ? followersAt(back(1)) - followersAt(back(2)) : followersAt(lastDate) - followersAt(back(period === "hoje" ? 1 : period === "7d" ? 7 : 30));
   const seriesDays = period === "30d" ? 30 : 7;
-  const window = sorted.slice(Math.max(0, sorted.length - (seriesDays + 1)));
+  const window = sorted.filter((s) => s.date >= back(seriesDays));
   const followersSeries = window.map((s) => ({ date: s.date, value: s.followers }));
   const reachSeries = window.map((s) => ({ date: s.date, value: s.reach }));
-  const periodLabel = `últimos ${Math.max(1, window.length - 1)} dias`;
-  const expectedDays = seriesDays + 1;
-  const allMeasured = window.length >= 2 && window.every((s, i) => i === 0 || daysBetween(window[i - 1].date, s.date) === 1);
+  const firstExpected = sorted[0] && sorted[0].date > back(seriesDays) ? sorted[0].date : back(seriesDays);
+  const expectedDays = lastDate ? daysBetween(firstExpected, lastDate) + 1 : 0;
+  const periodLabel = `últimos ${Math.max(1, expectedDays - 1)} dias`;
+  const allMeasured = window.length >= 2 && window.length === expectedDays;
 
   // ---- por formato ----
   const byType = (["IMAGE", "VIDEO", "CAROUSEL_ALBUM"] as PostType[]).map((t) => {
@@ -174,6 +177,9 @@ function topN(rec: Record<string, number>, n: number, total: number) {
 export function round(x: number, d: number) {
   const f = 10 ** d;
   return Math.round(x * f) / f;
+}
+function addDays(date: string, n: number) {
+  return new Date(Date.parse(date + "T00:00:00Z") + n * 86400000).toISOString().slice(0, 10);
 }
 function daysBetween(a: string, b: string) {
   return Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);

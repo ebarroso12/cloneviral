@@ -53,73 +53,133 @@ export async function findInstagramAccount(token: string) {
   return { pageId: p.id as string, igId: p.instagram_business_account.id as string };
 }
 
-/** Sincroniza perfil, posts, métricas por post, alcance diário e audiência. Cada bloco é tolerante a falha. */
-export async function syncAccount(userId: string) {
+const DAY = 86400000;
+const RECENT_DAYS = 30; // posts recentes têm as métricas relidas a cada coleta
+const BATCH = 5;
+
+/**
+ * Sincroniza perfil, alcance diário, posts, métricas por post e audiência. Cada bloco é tolerante a
+ * falha, mas toda falha vira aviso. Métrica que não veio nunca é gravada como zero por cima da anterior.
+ * Passado o prazo, para e devolve partial=true; a próxima chamada continua.
+ */
+export async function syncAccount(userId: string, opts: { deadlineMs?: number } = {}) {
   const store = getStore();
   const conn = (await store.list("ig_connection", userId))[0];
-  if (!conn || conn.demo) return { demo: true };
+  if (!conn || conn.demo) return { demo: true as const, partial: false, warnings: [] as string[] };
+  if (conn.status !== "connected" || !conn.token) throw new Error("O Instagram está desconectado. Conecte de novo em Conexões.");
+  const end = Date.now() + (opts.deadlineMs ?? 45000);
+  const late = () => Date.now() >= end;
+  const warnings = new Set<string>();
+  const warn = (what: string, e: any) => warnings.add(`${what}: ${String(e?.message ?? e).slice(0, 160)}`);
   const token = decrypt(conn.token);
   const ig = conn.igId as string;
   const prof = await gj(`${G}/${ig}?fields=username,name,biography,website,followers_count,follows_count,media_count,profile_picture_url&access_token=${token}`);
+
+  // alcance diário e retrato de hoje
   const today = new Date().toISOString().slice(0, 10);
-  let reachToday = 0;
+  const snaps = new Map((await store.list("snapshots", userId)).map((x) => [x.date as string, x]));
+  const reachByDay = new Map<string, number>();
   try {
-    const since = Math.floor(Date.now() / 1000) - 30 * 86400;
-    const r = await gj(`${G}/${ig}/insights?metric=reach&period=day&since=${since}&until=${Math.floor(Date.now() / 1000)}&access_token=${token}`);
-    for (const v of r.data?.[0]?.values ?? []) {
-      const d = String(v.end_time).slice(0, 10);
-      const cur = await store.get("snapshots", scopedId(userId, `snap_${d}`));
-      if (cur) await store.update("snapshots", cur.id, userId, { reach: v.value });
-      else await store.insert("snapshots", userId, { date: d, followers: prof.followers_count, following: prof.follows_count, mediaCount: prof.media_count, reach: v.value }, scopedId(userId, `snap_${d}`));
-      if (d === today) reachToday = v.value;
-    }
-  } catch {}
-  const cur = await store.get("snapshots", scopedId(userId, `snap_${today}`));
-  const snap = { date: today, followers: prof.followers_count, following: prof.follows_count, mediaCount: prof.media_count, reach: reachToday || cur?.reach || 0 };
+    const now = Math.floor(Date.now() / 1000);
+    const r = await gj(`${G}/${ig}/insights?metric=reach&period=day&since=${now - 30 * 86400}&until=${now}&access_token=${token}`);
+    for (const v of r.data?.[0]?.values ?? []) reachByDay.set(String(v.end_time).slice(0, 10), v.value);
+  } catch (e) {
+    warn("Alcance diário", e);
+  }
+  const base = { followers: prof.followers_count, following: prof.follows_count, mediaCount: prof.media_count };
+  for (const [date, reach] of reachByDay) {
+    const cur = snaps.get(date);
+    if (cur) await store.update("snapshots", cur.id, userId, { reach });
+    else if (date !== today) await store.insert("snapshots", userId, { date, ...base, reach }, scopedId(userId, `snap_${date}`));
+  }
+  const cur = snaps.get(today);
+  const snap = { date: today, ...base, reach: reachByDay.get(today) ?? cur?.reach ?? 0 };
   if (cur) await store.update("snapshots", cur.id, userId, snap);
   else await store.insert("snapshots", userId, snap, scopedId(userId, `snap_${today}`));
 
-  // posts (paginado)
+  // lista de posts: o que a própria listagem já informa
+  const known = new Map((await store.list("posts", userId)).map((x) => [x.id, x]));
+  const seen: { mediaId: string; id: string }[] = [];
   let url: string | null = `${G}/${ig}/media?fields=id,caption,media_type,permalink,timestamp,thumbnail_url,media_url,like_count,comments_count&limit=50&access_token=${token}`;
   let pages = 0;
-  while (url && pages < 60) {
+  while (url && pages < 60 && (pages === 0 || !late())) {
     const j: any = await gj(url);
     for (const m of j.data as any[]) {
-      let reach = 0, views = 0, saves = 0, shares = 0;
-      try {
-        const ins = await gj(`${G}/${m.id}/insights?metric=reach,views,saved,shares&access_token=${token}`);
-        for (const x of ins.data) {
-          const v = x.values?.[0]?.value ?? x.total_value?.value ?? 0;
-          if (x.name === "reach") reach = v;
-          if (x.name === "views") views = v;
-          if (x.name === "saved") saves = v;
-          if (x.name === "shares") shares = v;
-        }
-      } catch {}
-      const doc = { type: m.media_type, publishedAt: m.timestamp, caption: m.caption ?? "", permalink: m.permalink, thumbnailUrl: m.thumbnail_url ?? m.media_url, views, reach, likes: m.like_count ?? 0, comments: m.comments_count ?? 0, saves, shares };
-      const ex = await store.get("posts", scopedId(userId, m.id));
-      if (ex) await store.update("posts", ex.id, userId, doc);
-      else await store.insert("posts", userId, doc, scopedId(userId, m.id));
+      const id = scopedId(userId, m.id);
+      const doc = { type: m.media_type, publishedAt: m.timestamp, caption: m.caption ?? "", permalink: m.permalink, thumbnailUrl: m.thumbnail_url ?? m.media_url, likes: m.like_count ?? 0, comments: m.comments_count ?? 0 };
+      const ex = known.get(id);
+      const saved = ex ? await store.update("posts", id, userId, doc) : await store.insert("posts", userId, { ...doc, views: 0, reach: 0, saves: 0, shares: 0 }, id);
+      known.set(id, saved!);
+      seen.push({ mediaId: m.id, id });
     }
     url = j.paging?.next ?? null;
     pages++;
   }
+  const listIncomplete = !!url;
+
+  // métricas por post: primeiro os nunca medidos, depois os recentes
+  const never = seen.filter((p) => !known.get(p.id)!.insightsAt);
+  const recent = seen.filter((p) => { const d = known.get(p.id)!; return d.insightsAt && Date.now() - Date.parse(d.publishedAt) < RECENT_DAYS * DAY; });
+  const queue = [...never, ...recent];
+  let done = 0;
+  while (done < queue.length && !late()) {
+    await Promise.all(queue.slice(done, done + BATCH).map(async (p) => {
+      try {
+        const ins = await gj(`${G}/${p.mediaId}/insights?metric=reach,views,saved,shares&access_token=${token}`);
+        const patch: Record<string, any> = { insightsAt: new Date().toISOString() };
+        for (const x of ins.data) {
+          const v = x.values?.[0]?.value ?? x.total_value?.value;
+          const field = ({ reach: "reach", views: "views", saved: "saves", shares: "shares" } as Record<string, string>)[x.name];
+          if (field && typeof v === "number") patch[field] = v;
+        }
+        await store.update("posts", p.id, userId, patch);
+      } catch (e) {
+        warn("Métricas de posts", e);
+      }
+    }));
+    done += BATCH;
+  }
+  const partial = listIncomplete || done < never.length;
 
   // audiência
-  try {
-    const demo: Record<string, any> = {};
-    for (const b of ["age", "gender", "country", "city"]) {
-      const r = await gj(`${G}/${ig}/insights?metric=follower_demographics&period=lifetime&timeframe=this_month&metric_type=total_value&breakdown=${b}&access_token=${token}`);
-      demo[b] = r.data?.[0]?.total_value?.breakdowns?.[0]?.results ?? [];
+  if (!late()) {
+    try {
+      const demo: Record<string, any> = {};
+      for (const b of ["age", "gender", "country", "city"]) {
+        const r = await gj(`${G}/${ig}/insights?metric=follower_demographics&period=lifetime&timeframe=this_month&metric_type=total_value&breakdown=${b}&access_token=${token}`);
+        demo[b] = r.data?.[0]?.total_value?.breakdowns?.[0]?.results ?? [];
+      }
+      const rec = (arr: any[], f: (x: any) => string) => Object.fromEntries(arr.map((x) => [f(x), x.value]));
+      const gender = rec(demo.gender, (x) => x.dimension_values[0]);
+      const age = rec(demo.age, (x) => x.dimension_values[0]);
+      const total = Object.values(age).reduce((a: number, b: any) => a + b, 0);
+      if (total > 0) {
+        const aud = { classifiedTotal: total, age, gender: { F: gender.F ?? 0, M: gender.M ?? 0, U: gender.U ?? 0 }, countries: rec(demo.country, (x) => x.dimension_values[0]), cities: rec(demo.city, (x) => x.dimension_values[0]) };
+        const ex = (await store.list("audience", userId))[0];
+        if (ex) await store.update("audience", ex.id, userId, aud);
+        else await store.insert("audience", userId, aud, scopedId(userId, "aud"));
+      } else warnings.add("Audiência: a Meta não devolveu dados desta vez.");
+    } catch (e) {
+      warn("Audiência", e);
     }
-    const rec = (arr: any[], f: (x: any) => string) => Object.fromEntries(arr.map((x) => [f(x), x.value]));
-    const gender = rec(demo.gender, (x) => x.dimension_values[0]);
-    const age = rec(demo.age, (x) => x.dimension_values[0]);
-    const aud = { classifiedTotal: Object.values(age).reduce((a: number, b: any) => a + b, 0), age, gender: { F: gender.F ?? 0, M: gender.M ?? 0, U: gender.U ?? 0 }, countries: rec(demo.country, (x) => x.dimension_values[0]), cities: rec(demo.city, (x) => x.dimension_values[0]) };
-    const ex = (await store.list("audience", userId))[0];
-    if (ex) await store.update("audience", ex.id, userId, aud);
-    else await store.insert("audience", userId, aud, scopedId(userId, "aud"));
-  } catch {}
-  await store.update("ig_connection", conn.id, userId, { name: prof.name, igUsername: prof.username, bio: prof.biography, link: prof.website, lastSync: new Date().toISOString() });
-  return { ok: true };
+  }
+  const list = [...warnings];
+  await store.update("ig_connection", conn.id, userId, { name: prof.name, igUsername: prof.username, bio: prof.biography, link: prof.website, picture: prof.profile_picture_url ?? conn.picture, lastSync: new Date().toISOString(), syncWarnings: list, syncPartial: partial });
+  return { demo: false as const, partial, warnings: list };
+}
+
+/** Coleta diária (rota /api/cron/sync): todas as contas reais conectadas, uma de cada vez. */
+export async function syncAll(opts: { deadlineMs?: number } = {}) {
+  const conns = await getStore().findAll("ig_connection", (c) => !c.demo && c.status === "connected");
+  const results: { userId: string; ok: boolean; partial?: boolean; warnings?: string[]; error?: string }[] = [];
+  const each = Math.floor((opts.deadlineMs ?? 50000) / Math.max(1, conns.length));
+  for (const c of conns) {
+    try {
+      const r = await syncAccount(c.userId, { deadlineMs: each });
+      results.push({ userId: c.userId, ok: true, partial: r.partial, warnings: r.warnings });
+    } catch (e: any) {
+      results.push({ userId: c.userId, ok: false, error: String(e?.message ?? e).slice(0, 200) });
+    }
+  }
+  return { accounts: conns.length, results };
 }

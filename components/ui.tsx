@@ -2,17 +2,22 @@
 import { useEffect, useRef, useState } from "react";
 
 export function Tip({ label, children }: { label: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const open = hover || pinned;
   const ref = useRef<HTMLSpanElement>(null);
+  const close = () => { setHover(false); setPinned(false); };
   useEffect(() => {
     if (!open) return;
-    const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    const out = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) close(); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    document.addEventListener("mousedown", out);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", out); document.removeEventListener("keydown", esc); };
   }, [open]);
   return (
-    <span ref={ref} style={{ position: "relative", display: "inline-flex" }} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <button type="button" className="info-btn" aria-label={label} aria-expanded={open} onClick={() => setOpen((o) => !o)}>i</button>
+    <span ref={ref} style={{ position: "relative", display: "inline-flex" }} onPointerEnter={(e) => e.pointerType === "mouse" && setHover(true)} onPointerLeave={(e) => e.pointerType === "mouse" && setHover(false)}>
+      <button type="button" className="info-btn" aria-label={label} aria-expanded={open} onClick={() => (pinned ? close() : setPinned(true))}>i</button>
       {open && <span role="tooltip" className="tip" style={{ top: 22, left: -8 }}>{children}</span>}
     </span>
   );

@@ -3,13 +3,17 @@ export type Look = { bg: string; fg: string; accent: string; muted: string; font
 export const W = 1080, H = 1440;
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const safeLook = (k: Look): Look => ({ bg: esc(String(k.bg)), fg: esc(String(k.fg)), accent: esc(String(k.accent)), muted: esc(String(k.muted)), font: String(k.font).replace(/"/g, "'") });
+/** Só PNG ou JPEG embutidos (até ~1,5 MB): endereço externo viraria rastreio e SVG pode carregar código. */
+export function validCover(v: unknown): string | null {
+  return typeof v === "string" && v.length <= 2_000_000 && /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(v) ? v : null;
+}
 function wrap(text: string, max: number) {
   const out: string[] = []; let line = "";
   for (const w of text.split(/\s+/)) { if ((line + " " + w).trim().length > max) { if (line) out.push(line); line = w; } else line = (line + " " + w).trim(); }
   if (line) out.push(line);
   return out;
 }
-export function slideSvg(s: { role: string; title: string; text: string }, i: number, n: number, look: Look, handle = "") {
+export function slideSvg(s: { role: string; title: string; text: string }, i: number, n: number, look: Look, handle = "", coverImage?: string | null) {
   const k = safeLook(look);
   const cover = i === 0;
   const tsize = cover ? 92 : 70, tmax = cover ? 16 : 20;
@@ -19,7 +23,10 @@ export function slideSvg(s: { role: string; title: string; text: string }, i: nu
   const lines = tl.map((l, j) => `<text x="90" y="${ty + j * (tsize + 14)}" font-size="${tsize}" font-weight="700" fill="${k.fg}">${esc(l)}</text>`).join("");
   const by = ty + tl.length * (tsize + 14) + 40;
   const body = cover ? "" : bl.map((l, j) => `<text x="90" y="${by + j * 54}" font-size="40" fill="${k.muted}">${esc(l)}</text>`).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="${esc(k.font)}"><rect width="${W}" height="${H}" fill="${k.bg}"/><rect x="90" y="150" width="120" height="12" rx="6" fill="${k.accent}"/><text x="90" y="230" font-size="34" letter-spacing="6" fill="${k.accent}">${esc(s.role.toUpperCase())}</text>${lines}${body}<text x="90" y="${H - 90}" font-size="30" fill="${k.muted}">${esc(handle)}</text><text x="${W - 90}" y="${H - 90}" font-size="30" text-anchor="end" fill="${k.muted}">${i + 1}/${n}</text></svg>`;
+  const photo = cover ? validCover(coverImage) : null;
+  // o véu na cor de fundo mantém o título legível sobre a foto
+  const picture = photo ? `<image href="${photo}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice"/><rect width="${W}" height="${H}" fill="${k.bg}" opacity="0.55"/>` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="${esc(k.font)}"><rect width="${W}" height="${H}" fill="${k.bg}"/>${picture}<rect x="90" y="150" width="120" height="12" rx="6" fill="${k.accent}"/><text x="90" y="230" font-size="34" letter-spacing="6" fill="${k.accent}">${esc(s.role.toUpperCase())}</text>${lines}${body}<text x="90" y="${H - 90}" font-size="30" fill="${k.muted}">${esc(handle)}</text><text x="${W - 90}" y="${H - 90}" font-size="30" text-anchor="end" fill="${k.muted}">${i + 1}/${n}</text></svg>`;
 }
 export function svgToPng(svg: string): Promise<Blob> {
   return new Promise((res, rej) => {

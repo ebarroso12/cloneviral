@@ -7,5 +7,6 @@ export default async function Page() {
   const s = getStore();
   const baits = (await s.list("lead_magnets", u.id)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const scripts = (await s.list("scripts", u.id)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 30);
-  return <IscaView baits={JSON.parse(JSON.stringify(baits))} scripts={JSON.parse(JSON.stringify(scripts))} />;
+  const patterns = JSON.parse(JSON.stringify(await getStore().list("patterns", u.id)));
+  return <IscaView patterns={patterns} baits={JSON.parse(JSON.stringify(baits))} scripts={JSON.parse(JSON.stringify(scripts))} />;
 }

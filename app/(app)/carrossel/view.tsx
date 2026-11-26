@@ -15,6 +15,19 @@ export default function CarrosselView({ list, kit, patterns, models, cats, handl
   const [lang, setLang] = useState("pt-BR");
   const [useBrand, setUseBrand] = useState(!!kit?.applied);
   const [imgMode, setImgMode] = useState("color");
+  const [photo, setPhoto] = useState<string>("");
+  // reduz a foto no navegador para 1080x1440 antes de enviar
+  const pickPhoto = async (file: File) => {
+    try {
+      if (!/^image\/(png|jpeg)$/.test(file.type)) throw new Error("Use uma foto PNG ou JPEG.");
+      const img = await createImageBitmap(file);
+      const cv = document.createElement("canvas");
+      cv.width = 1080; cv.height = 1440;
+      const k = Math.max(cv.width / img.width, cv.height / img.height);
+      cv.getContext("2d")!.drawImage(img, (cv.width - img.width * k) / 2, (cv.height - img.height * k) / 2, img.width * k, img.height * k);
+      setPhoto(cv.toDataURL("image/jpeg", 0.82));
+    } catch (e: any) { toast(e.message || "Não consegui ler essa foto.", "err"); }
+  };
   const [picker, setPicker] = useState(false);
   const [cat, setCat] = useState(cats[0].name);
   const [busy, setBusy] = useState(false);
@@ -28,12 +41,12 @@ export default function CarrosselView({ list, kit, patterns, models, cats, handl
   };
   const go = async () => {
     setBusy(true);
-    try { const c = await api("/api/ai/carousel", { body: { theme, modelId: modelId || undefined, patternId: patternId || undefined, language: lang, imageMode: imgMode } }); if (!useBrand && c.brandApplied) await api(`/api/c/carousels?id=${c.id}`, { method: "PATCH", body: { brandApplied: false } }); setOpenId(c.id); toast("Carrossel criado."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); }
+    try { const c = await api("/api/ai/carousel", { body: { theme, modelId: modelId || undefined, patternId: patternId || undefined, language: lang, imageMode: imgMode, coverImage: imgMode === "photo" ? photo : undefined } }); if (!useBrand && c.brandApplied) await api(`/api/c/carousels?id=${c.id}`, { method: "PATCH", body: { brandApplied: false } }); setOpenId(c.id); toast("Carrossel criado."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); }
   };
   const edit = async (c: any, i: number, f: "title" | "text", v: string) => { const slides = c.slides.map((s: any, j: number) => (j === i ? { ...s, [f]: v } : s)); await api(`/api/c/carousels?id=${c.id}`, { method: "PATCH", body: { slides, approved: false } }); r.refresh(); };
   const approve = async (c: any) => { await api(`/api/c/carousels?id=${c.id}`, { method: "PATCH", body: { approved: !c.approved } }); r.refresh(); };
   const del = async (c: any) => { if (confirm("Excluir este carrossel?")) { await api(`/api/c/carousels?id=${c.id}`, { method: "DELETE" }); r.refresh(); } };
-  const dl = async (c: any, i: number) => { try { const b = await svgToPng(slideSvg(c.slides[i], i, c.slides.length, lookFor(c), handle)); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `carrossel-${i + 1}.png`; a.click(); URL.revokeObjectURL(a.href); } catch (e: any) { toast(e.message, "err"); } };
+  const dl = async (c: any, i: number) => { try { const b = await svgToPng(slideSvg(c.slides[i], i, c.slides.length, lookFor(c), handle, c.coverImage)); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `carrossel-${i + 1}.png`; a.click(); URL.revokeObjectURL(a.href); } catch (e: any) { toast(e.message, "err"); } };
   const dlAll = async (c: any) => { for (let i = 0; i < c.slides.length; i++) { await dl(c, i); await new Promise((x) => setTimeout(x, 250)); } };
   return (
     <>
@@ -49,7 +62,8 @@ export default function CarrosselView({ list, kit, patterns, models, cats, handl
           <label className="row small"><input type="checkbox" style={{ width: "auto" }} checked={useBrand} disabled={!kit?.applied} onChange={(e) => setUseBrand(e.target.checked)} /> Usar minha identidade visual {!kit?.applied && <a href="/identidade-visual">(configurar)</a>}</label>
           <div className="chips">{[["color", "Fundo de cor"], ["photo", "Com foto na capa"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={imgMode === k} onClick={() => setImgMode(k)}>{v}</button>)}</div>
         </div>
-        <button className="btn primary" onClick={go} disabled={busy || !theme.trim()}>{busy ? "Criando..." : "Criar carrossel · 2 créditos"}</button>
+        {imgMode === "photo" && <div className="field"><label htmlFor="foto">Foto da capa (PNG ou JPEG, sem crédito extra)</label><input id="foto" type="file" accept="image/png,image/jpeg" onChange={(e) => e.target.files?.[0] && pickPhoto(e.target.files[0])} />{photo && <span className="tiny muted">Foto pronta.</span>}</div>}
+        <button className="btn primary" onClick={go} disabled={busy || !theme.trim() || (imgMode === "photo" && !photo)}>{busy ? "Criando..." : "Criar carrossel · 2 créditos"}</button>
       </div>
       <h2 style={{ margin: "22px 0 10px" }}>Seus carrosséis</h2>
       {list.length === 0 && <div className="empty">Nenhum carrossel criado.</div>}
@@ -60,7 +74,7 @@ export default function CarrosselView({ list, kit, patterns, models, cats, handl
             <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", marginTop: 12 }}>
               {c.slides.map((s: any, i: number) => (
                 <div key={i}>
-                  <div dangerouslySetInnerHTML={{ __html: slideSvg(s, i, c.slides.length, lookFor(c), handle).replace(/width="1080" height="1440"/, 'width="100%"') }} style={{ borderRadius: 10, overflow: "hidden" }} />
+                  <div dangerouslySetInnerHTML={{ __html: slideSvg(s, i, c.slides.length, lookFor(c), handle, c.coverImage).replace(/width="1080" height="1440"/, 'width="100%"') }} style={{ borderRadius: 10, overflow: "hidden" }} />
                   <input aria-label={`Título do slide ${i + 1}`} defaultValue={s.title} onBlur={(e) => e.target.value !== s.title && edit(c, i, "title", e.target.value)} style={{ marginTop: 6 }} />
                   <textarea aria-label={`Texto do slide ${i + 1}`} defaultValue={s.text} onBlur={(e) => e.target.value !== s.text && edit(c, i, "text", e.target.value)} style={{ minHeight: 60, marginTop: 6 }} />
                   <button className="btn sm" onClick={() => dl(c, i)}>Baixar PNG</button>

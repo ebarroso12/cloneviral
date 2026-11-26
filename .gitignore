@@ -6,3 +6,5 @@ data/
 *.log
 replica/screens/
 *.tsbuildinfo
+replica/clone-screens/
+__pycache__/

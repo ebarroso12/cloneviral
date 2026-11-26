@@ -28,6 +28,7 @@ export default function ConexoesView({ conn, ads, meta, flash }: { conn: any; ad
               <p><b>@{conn.igUsername}</b></p>
               <p className="muted small">autorização a renovar até {dt(conn.authorizedUntil)}</p>
               <p className="muted small">Serve para renovar o acesso antes do prazo que a Meta exige, a cada 90 dias, ou para trocar a Página conectada sem desconectar. Nada é apagado e o seu histórico não é tocado.</p>
+              {conn.syncWarnings?.length > 0 && <p className="small err">A última coleta teve avisos: {conn.syncWarnings.join(" · ")}</p>}
               <div className="row wrap">
                 <a className="btn" href="/api/ig/connect">Refazer a autorização</a>
                 <button className="btn danger" disabled={busy === "d"} onClick={() => confirm("Desconectar o Instagram? O histórico medido continua salvo.") && run("d", () => api("/api/ig/disconnect", { body: {} }), "Instagram desconectado.")}>Desconectar</button>

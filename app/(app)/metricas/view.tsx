@@ -24,7 +24,8 @@ export default function MetricasView() {
     setM(await api(`/api/metrics?period=${p}`));
   }, []);
   useEffect(() => { load(period); }, [period, load]);
-  useEffect(() => { api<Post[]>("/api/c/posts").then((r) => setPosts([...r].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)))); }, []);
+  const loadPosts = useCallback(() => api<Post[]>("/api/c/posts").then((r) => setPosts([...r].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)))), []);
+  useEffect(() => { loadPosts(); }, [loadPosts]);
 
   if (!m) return <div className="muted" style={{ padding: 40 }}>Carregando as suas métricas...</div>;
   const c = m.connection;
@@ -43,7 +44,7 @@ export default function MetricasView() {
         <div className="card empty">Conecte o seu Instagram para ver as métricas. <Link href="/conexoes">Ir para Conexões</Link></div>
       ) : (
         <div className="card" style={{ display: "flex", gap: 18, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <div className="avatar" style={{ width: 76, height: 76, fontSize: 28 }} aria-hidden>{(c.name || "?").charAt(0)}</div>
+          {c.picture ? <img className="avatar" src={c.picture} alt={`Foto de perfil de ${c.name}`} width={76} height={76} style={{ width: 76, height: 76, objectFit: "cover" }} /> : <div className="avatar" style={{ width: 76, height: 76, fontSize: 28 }} aria-hidden>{(c.name || "?").charAt(0)}</div>}
           <div style={{ flex: 1, minWidth: 240 }}>
             <div className="row wrap"><b style={{ fontSize: 18 }}>{c.name}</b><span className="muted">@{c.igUsername}</span></div>
             <div style={{ margin: "6px 0" }}><span className="tag green">Conectado</span>{c.demo && <span className="tag yellow" style={{ marginLeft: 8 }}>Conta de demonstração</span>}</div>
@@ -51,11 +52,19 @@ export default function MetricasView() {
             {c.link && <a href={`https://${String(c.link).replace(/^https?:\/\//, "")}`} target="_blank" rel="noreferrer">{String(c.link).replace(/^https?:\/\//, "")}</a>}
             <p className="muted small" style={{ marginTop: 10 }}>Conta profissional · autorização renovada a cada 90 dias · última sincronização {fmtDateTimePt(c.lastSync)}</p>
           </div>
-          <button className="btn sm" disabled={syncing} onClick={async () => { setSyncing(true); try { const r = await api("/api/ig/sync", { method: "POST", body: {} }); toast(r.demo ? "Conta de demonstração: os dados já são os mais recentes." : "Dados atualizados."); await load(period); } catch (x: any) { toast(x.message, "err"); } finally { setSyncing(false); } }}>{syncing ? "Sincronizando..." : "Sincronizar agora"}</button>
+          <button className="btn sm" disabled={syncing} onClick={async () => { setSyncing(true); try { const r = await api("/api/ig/sync", { method: "POST", body: {} }); toast(r.demo ? "Conta de demonstração: os dados já são os mais recentes." : r.partial ? "Parte dos dados foi atualizada. Sincronize de novo para continuar." : r.warnings.length ? "Atualizado com avisos. Veja abaixo." : "Dados atualizados.", r.warnings?.length ? "err" : "ok"); await load(period); await loadPosts(); } catch (x: any) { toast(x.message, "err"); } finally { setSyncing(false); } }}>{syncing ? "Sincronizando..." : "Sincronizar agora"}</button>
         </div>
       )}
 
-      <div className="grid g3" style={{ marginTop: 14 }}>
+      {(c?.syncWarnings?.length > 0 || c?.syncPartial) && (
+        <div className="card warn" role="status" style={{ marginTop: 14 }}>
+          <b>A última coleta ficou incompleta</b>
+          {c.syncPartial && <p className="small">Ainda há posts sem métricas detalhadas. Sincronize de novo para continuar.</p>}
+          <ul className="small muted">{(c.syncWarnings ?? []).map((w: string) => <li key={w}>{w}</li>)}</ul>
+        </div>
+      )}
+
+      <div className="grid g4" style={{ marginTop: 14 }}>
         <div className="card kpi"><div className="label">Seguidores</div><div className="value blue">{fmtInt(m.profile.followers)}</div></div>
         <div className="card kpi">
           <div className="label">Visualizações <Tip label="Como eu chego neste número de visualizações">Orgânico é quanto as suas publicações foram vistas, e conta a vida inteira de cada uma, desde {m.posts ? fmtDate(posts[posts.length - 1]?.publishedAt ?? new Date().toISOString()) : "o começo"}.</Tip></div>
@@ -143,8 +152,8 @@ export default function MetricasView() {
             <h2>De onde eles são</h2>
             <div className="muted small" style={{ marginBottom: 12 }}>países e cidades · retrato da última coleta, sem filtro de período</div>
             <div className="grid g2">
-              <div><b className="small muted">PAÍSES ({m.audience.countriesTotal})</b>{m.audience.countries.slice(0, 15).map((r: Row) => <StatBar key={r.label} r={r} count />)}</div>
-              <div><b className="small muted">CIDADES ({m.audience.citiesTotal})</b>{m.audience.cities.slice(0, 15).map((r: Row) => <StatBar key={r.label} r={r} count />)}</div>
+              <div><b className="small muted">PAÍSES ({m.audience.countriesTotal})</b>{m.audience.countries.map((r: Row) => <StatBar key={r.label} r={r} count />)}</div>
+              <div><b className="small muted">CIDADES ({m.audience.citiesTotal})</b>{m.audience.cities.map((r: Row) => <StatBar key={r.label} r={r} count />)}</div>
             </div>
           </div>
         </>
@@ -157,7 +166,7 @@ export default function MetricasView() {
         <div className="grid g4">
           {topList.map((p) => (
             <button key={p.id} className="post-card" onClick={() => setOpen(p)} aria-label={`Abrir post de ${fmtDate(p.publishedAt)}`}>
-              <div className="thumb" style={{ background: gradientFor(p.id) }}>{fmtCompact(p.views)} visualizações</div>
+              <div className="thumb" style={thumbStyle(p)}>{fmtCompact(p.views)} visualizações</div>
               <div style={{ padding: 12 }}>
                 <div className="muted tiny">{TYPE_LABEL[p.type]} · {fmtDate(p.publishedAt)}, {timeAgo(p.publishedAt)}</div>
                 <div className="small" style={{ margin: "6px 0 8px", minHeight: 36, overflow: "hidden" }}>{(p.caption || "(sem legenda)").slice(0, 90)}</div>
@@ -177,7 +186,7 @@ export default function MetricasView() {
       {open && (
         <Modal onClose={() => setOpen(null)} title="Post">
           <div className="grid g2">
-            <div className="thumb" style={{ height: 320, borderRadius: 14, background: gradientFor(open.id) }}>{TYPE_LABEL[open.type]}</div>
+            <div className="thumb" style={{ height: 320, borderRadius: 14, ...thumbStyle(open) }}>{TYPE_LABEL[open.type]}</div>
             <div>
               <div className="muted small">{fmtDate(open.publishedAt)} · {timeAgo(open.publishedAt)}</div>
               <p style={{ margin: "10px 0" }}>{open.caption || "(sem legenda)"}</p>
@@ -194,6 +203,10 @@ export default function MetricasView() {
   );
 }
 
+function thumbStyle(p: Post): React.CSSProperties {
+  const img = p.thumbnailUrl?.startsWith("https://") ? `linear-gradient(transparent 55%, #000b), url(${JSON.stringify(p.thumbnailUrl)}) center / cover, ` : "";
+  return { background: img + gradientFor(p.id) };
+}
 function gradientFor(id: string) {
   const h = [...id].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
   return `linear-gradient(135deg, hsl(${h} 55% 28%), hsl(${(h + 60) % 360} 60% 36%))`;

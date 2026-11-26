@@ -136,11 +136,11 @@ export function analyzeTop(posts: Post[], n: number): Pattern[] {
 
 // ---------- carrossel ----------
 export type Slide = { role: string; title: string; text: string };
-export async function genCarousel(c: Ctx, o: { theme: string; model?: CarouselModel | null; pattern?: Pattern | null }): Promise<Slide[]> {
+export async function genCarousel(c: Ctx, o: { theme: string; model?: CarouselModel | null; pattern?: Pattern | null; language?: string }): Promise<Slide[]> {
   const roles = o.model?.roles ?? ["capa", "problema", "virada", "passo", "passo", "resultado", "convite"];
   const llm = await llmJson<Slide[]>(
     "Você escreve textos de carrossel de Instagram em português do Brasil. Responda SOMENTE um array JSON de {role,title,text}.",
-    `${voiceBrief(c)}\nTema: ${o.theme}. Slides (papéis): ${roles.join(", ")}.`,
+    `${voiceBrief(c)}\nTema: ${o.theme}. Slides (papéis): ${roles.join(", ")}. Idioma do texto: ${o.language ?? "pt-BR"}.`,
   );
   if (llm && Array.isArray(llm) && llm.length === roles.length) return llm.map((s) => ({ ...s, title: applyVoice(s.title, c.business), text: applyVoice(s.text, c.business) }));
   const t = lc(o.theme);
