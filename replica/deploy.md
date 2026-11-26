@@ -1,12 +1,19 @@
 # Deploy: Radar Viral
 
-Data: 26/11/2026. Autorização do dono para publicar: **ainda não pedida**. Nada foi publicado.
+Data: 26/11/2026. **Publicado** em https://cloneviral-iota.vercel.app (Vercel, time `edsonbdados-9184`, projeto `cloneviral`, região gru1). Banco: Supabase `wwflyczpnizlmnzczqsl`.
+
+Atenção: o projeto da Vercel está ligado à cópia `edsonbdados-Bancodados/cloneviral`, não a `ebarroso12/cloneviral`. Envio para o repositório do dono não publica sozinho.
+
+## Provas no endereço público
+- `SupabaseStore` contra o banco real: gravar, ler, buscar, alterar e apagar; com segredo errado ou sem segredo, nada.
+- Conta temporária: cadastro só com o código, 17 telas respondendo 200, ideia persistida, varredura com texto colado, créditos descontados, PDF, segundo cadastro recusado, exclusão da conta. Banco com 0 registros depois.
+- Não testado: Instagram, Gemini, execução do cron diário, aparência das telas no navegador.
 
 ## Verificação prévia
 
 | item | situação |
 | --- | --- |
-| testes de unidade | 71 de 71 |
+| testes de unidade | 72 de 72 |
 | fluxos no navegador | 35 de 35 |
 | build de produção | passa (Next 15.5.29) |
 | auditoria de dependências (`npm audit`) | 0 vulnerabilidades |
@@ -17,36 +24,8 @@ Data: 26/11/2026. Autorização do dono para publicar: **ainda não pedida**. Na
 | exclusão de conta | existe, com senha |
 | favicon e imagem social próprios | favicon sim; imagem social não |
 
-Pela regra da fase, com itens reprovados o deploy público fica parado. O uso no próprio computador não depende dele e não tem custo.
-
-Num servidor gratuito a publicação agendada precisaria de um agendador externo e o envio de vídeo não funciona; por isso o uso local é o recomendado.
-
-## Para publicar (autorizado pelo dono em 26/11/2026, ainda não publicado)
-
-Bloqueios: a criação do projeto Supabase foi negada pela trava de permissões da ferramenta; a conta da Vercel disponível no conector não enxerga o GitHub `ebarroso12`.
-
-1. Criar um projeto Supabase gratuito, novo, só deste app (região São Paulo).
-2. Importar `ebarroso12/cloneviral` na Vercel (instala o app da Vercel no GitHub).
-3. Aplicar `supabase/migrations/0001_app_docs.sql` e `0002_acesso_por_segredo.sql`; gerar `RV_DB_KEY` e gravar só o sha256 em `private.rv_key`.
-4. Variáveis na Vercel: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `RV_DB_KEY`, `RV_SECRET`, `RV_SIGNUP_CODE`, `CRON_SECRET`, `APP_URL`. Não definir `RV_DEMO`.
-5. Publicar, criar a conta do dono com o código e testar no endereço público.
-
-A regra de acesso foi provada num Postgres embutido (`e2e/rls.mjs`): com o segredo lê e grava; sem ele, ou com segredo errado, nada. Nunca testada num Supabase real.
-
-## Caminho manual (sem a ferramenta tocar nas contas)
-
-`node scripts/preparar-publicacao.mjs` cria a pasta `publicacao/` (fora do GitHub; contém segredos).
-
-1. supabase.com: novo projeto gratuito `radar-viral`, região São Paulo.
-2. No projeto, SQL Editor: colar todo o `publicacao/1-supabase.sql` e executar.
-3. Em `publicacao/2-vercel.env`, preencher `SUPABASE_URL` e `SUPABASE_ANON_KEY` (Project Settings > API; nunca a chave service_role).
-4. vercel.com, Add New > Project: autorizar o GitHub `ebarroso12`, importar `cloneviral` e colar o conteúdo do `.env` em Environment Variables antes de clicar em Deploy.
-5. Abrir o endereço, ir a `/signup` e usar o `RV_SIGNUP_CODE` do arquivo.
-6. Para o login da Meta, definir depois `APP_URL` com o endereço publicado.
-
 ## Limitações conhecidas num servidor
 - Envio de vídeo responde que não está disponível (falta enviar direto ao Storage).
-- `SupabaseStore` nunca foi exercitado contra um Supabase real.
 - Publicação automática de Reels não funciona no servidor: depende do vídeo, que só pode ser guardado no computador.
 - O plano gratuito da Vercel é para uso não comercial.
 - A trava de cobrança dupla vale dentro de uma instância do servidor.

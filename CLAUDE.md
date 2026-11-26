@@ -30,8 +30,8 @@ Os fluxos gravam no banco: rode sempre em pasta vazia, senão os casos de cadast
 
 Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/globals.css`, alias `@/` na raiz. Cada tela em `app/(app)/<rota>/` tem `page.tsx` e, quando interativa, `view.tsx` (cliente). `app/(app)/layout.tsx` exige sessão e monta `components/Shell.tsx`, onde fica o menu.
 
-- **Dados** (`lib/store.ts`): uma interface `Store` de documentos por coleção, com `FileStore` (`data/db.json`, gravação atrasada em 150 ms) e `SupabaseStore` (tabela única `app_docs`, via PostgREST com service role). Escolha por `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. Não há schema por entidade: o modelo de dados está descrito em `replica/recon.md`. Qualquer mudança na interface vale para as duas implementações.
-- **Escopo por usuário** é responsabilidade do código: RLS está ligada sem política e o servidor usa service role. `get()` e `findOne()` não filtram usuário, então quem chama precisa comparar `userId`.
+- **Dados** (`lib/store.ts`): uma interface `Store` de documentos por coleção, com `FileStore` (`data/db.json`, gravação atrasada em 150 ms) e `SupabaseStore` (tabela única `app_docs`, via PostgREST com service role). Escolha por `supabaseConfig` (`SUPABASE_URL` + service role, ou chave pública + `RV_DB_KEY`). Não há schema por entidade: o modelo de dados está descrito em `replica/recon.md`. Qualquer mudança na interface vale para as duas implementações.
+- **Escopo por usuário** é responsabilidade do código: a política da migração 0002 só confere o segredo do servidor (ou usa-se service role). `get()` e `findOne()` não filtram usuário, então quem chama precisa comparar `userId`.
 - **API**: handlers usam `route()` de `lib/api.ts` (autentica e converte `HttpError` e `InsufficientCredits` em 401/4xx/402). CRUD simples passa por `app/api/c/[collection]`, que só aceita as listas `WRITABLE` e `READONLY`: coleção nova precisa entrar nelas.
 - **Cliente** chama a API com `api()` de `lib/client.ts`.
 - **Créditos** (`lib/credits.ts`): livro-razão `ledger`; saldo é a soma das linhas. Cobrar antes de gerar (`charge`) e devolver a diferença (`refund`) se render menos. Os custos em `COSTS` reproduzem o original e há teste sobre eles.
@@ -60,7 +60,7 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 
 ## Limitações abertas
 
-Instagram (conexão, coleta, publicação), Gemini e Supabase nunca testados contra o serviço real. Envio de vídeo não funciona na Vercel.
+Instagram (conexão, coleta, publicação) e Gemini nunca testados contra o serviço real. Publicado na Vercel com Supabase real (ver `replica/deploy.md`). Envio de vídeo não funciona na Vercel.
 
 ## Pipeline replica e regras do projeto
 
