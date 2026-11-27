@@ -546,6 +546,31 @@ def convite(browser):
     assert s == 400, "convite usado duas vezes"
 
 
+@caso("OLHO senha aparece e esconde em todas as telas que pedem senha")
+def olho(browser):
+    p = browser.new_context(locale="pt-BR", viewport={"width": 390, "height": 800}).new_page()
+    vigiar(p)
+    def conferir(seletor):
+        campo = p.locator(seletor)
+        campo.fill("segredo-visivel-123")
+        assert campo.get_attribute("type") == "password"
+        p.get_by_role("button", name="Mostrar o que foi digitado").click()
+        assert campo.get_attribute("type") == "text" and campo.input_value() == "segredo-visivel-123"
+        p.get_by_role("button", name="Esconder o que foi digitado").click()
+        assert campo.get_attribute("type") == "password"
+        assert p.url.split("?")[0].endswith(("login", "signup", "conexoes", "conta")), "o olho enviou o formulário"
+    ir(p, "login")
+    conferir("#p")
+    ir(p, "signup")
+    conferir("#p")
+    assert api(p, "POST", "/api/auth/login", {"email": "dono@exemplo.test", "password": "senha-de-teste-123"})[0] == 200
+    ir(p, "conexoes")
+    p.get_by_text("Seu app da Meta").click() if not p.locator("#ms").is_visible() else None
+    conferir("#ms")
+    ir(p, "conta")
+    conferir('[aria-label="Sua senha para excluir"]')
+
+
 @caso("SEG-3 senha errada em série bloqueia")
 def forca_bruta(browser):
     p = browser.new_context().new_page()
@@ -573,6 +598,7 @@ with sync_playwright() as pw:
     isolamento(nav, pagina)
     legais(nav)
     convite(nav)
+    olho(nav)
     excluir(nav)
     sair(pagina)
     forca_bruta(nav)

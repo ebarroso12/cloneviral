@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/client";
+import { PasswordInput } from "@/components/ui";
 
 export default function SignupView({ needsCode, invite }: { needsCode: boolean; invite: string }) {
   const r = useRouter();
@@ -15,7 +16,7 @@ export default function SignupView({ needsCode, invite }: { needsCode: boolean; 
         <h2>Criar conta</h2>
         <div className="field"><label htmlFor="n">Seu nome</label><input id="n" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required /></div>
         <div className="field"><label htmlFor="e">E-mail</label><input id="e" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} required /></div>
-        <div className="field"><label htmlFor="p">Senha (8+ caracteres)</label><input id="p" type="password" minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} required /></div>
+        <div className="field"><label htmlFor="p">Senha (8+ caracteres)</label><PasswordInput id="p" minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} required /></div>
         {needsCode && <div className="field"><label htmlFor="c">Código de cadastro ou convite</label><input id="c" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} required /></div>}
         {err && <div className="err" role="alert">{err}</div>}
         <button className="btn primary" style={{ width: "100%" }} disabled={busy}>{busy ? "Criando..." : "Criar conta"}</button>

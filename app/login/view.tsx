@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/client";
+import { PasswordInput } from "@/components/ui";
 
 export default function LoginView({ demo }: { demo: { email: string; password: string } | null }) {
   const r = useRouter();
@@ -16,7 +17,7 @@ export default function LoginView({ demo }: { demo: { email: string; password: s
         <h2>Entrar no Radar Viral</h2>
         <p className="muted small">{demo ? "Use a conta de demonstração ou crie a sua." : "Entre com a sua conta."}</p>
         <div className="field"><label htmlFor="e">E-mail</label><input id="e" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" /></div>
-        <div className="field"><label htmlFor="p">Senha</label><input id="p" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" /></div>
+        <div className="field"><label htmlFor="p">Senha</label><PasswordInput id="p" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" /></div>
         {err && <div className="err" role="alert">{err}</div>}
         <button className="btn primary" style={{ width: "100%" }} disabled={busy}>{busy ? "Entrando..." : "Entrar"}</button>
         {demo && <button type="button" className="btn ghost" style={{ width: "100%", marginTop: 8 }} onClick={() => { setEmail(demo.email); setPassword(demo.password); }}>Preencher conta de demonstração</button>}

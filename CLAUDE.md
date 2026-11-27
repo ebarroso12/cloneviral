@@ -56,6 +56,7 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 - Métrica que a Meta não devolveu não é gravada como zero, e a falha vira aviso em `syncWarnings`.
 - Número estimado nunca aparece como medido (anúncios simulados só na demo).
 - Demo, cadastro e limitações de servidor são decididos em `lib/config.ts`.
+- Campo de senha ou chave secreta usa `PasswordInput` (`components/ui.tsx`), com o olho: pedido do dono.
 - Dono é a primeira conta real (`isOwner`): só ele convida e grava o app da Meta. Convite é de uso único.
 - Horário de agendamento passa por `dueTime` (usa o fuso do aparelho; o servidor está em UTC).
 

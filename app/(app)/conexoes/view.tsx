@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/client";
-import { PageHead, useToast } from "@/components/ui";
+import { PasswordInput, PageHead, useToast } from "@/components/ui";
 
 const mes = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const dt = (iso: string) => { const d = new Date(iso); return `${d.getDate()} de ${mes[d.getMonth()]} de ${d.getFullYear()}`; };
@@ -88,7 +88,7 @@ function MetaApp({ app, configured, onSave, busy }: { app: { appId: string; conf
       </ol>
       <form onSubmit={(e) => { e.preventDefault(); onSave(f); setF({ ...f, secret: "" }); }}>
         <div className="field"><label htmlFor="ma">ID do app</label><input id="ma" inputMode="numeric" value={f.appId} onChange={(e) => setF({ ...f, appId: e.target.value })} required /></div>
-        <div className="field"><label htmlFor="ms">Chave secreta {configured && "(preencha só para trocar)"}</label><input id="ms" type="password" autoComplete="off" value={f.secret} onChange={(e) => setF({ ...f, secret: e.target.value })} required /></div>
+        <div className="field"><label htmlFor="ms">Chave secreta {configured && "(preencha só para trocar)"}</label><PasswordInput id="ms" autoComplete="off" value={f.secret} onChange={(e) => setF({ ...f, secret: e.target.value })} required /></div>
         <div className="field"><label htmlFor="mc">ID da configuração (só no Login do Facebook para Empresas)</label><input id="mc" inputMode="numeric" value={f.configId} onChange={(e) => setF({ ...f, configId: e.target.value })} /></div>
         <button className="btn primary" disabled={busy}>Salvar</button>
       </form>

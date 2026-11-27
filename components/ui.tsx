@@ -81,3 +81,18 @@ export function PageHead({ title, desc, right }: { title: string; desc?: string;
     </div>
   );
 }
+
+/** Campo de senha com o olho: mostra o que está digitado. A senha já gravada não volta do servidor. */
+export function PasswordInput(props: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="pass">
+      <input {...props} type={show ? "text" : "password"} spellCheck={false} autoCapitalize="none" autoCorrect="off" />
+      <button type="button" className="eye" onClick={() => setShow((s) => !s)} aria-label={show ? "Esconder o que foi digitado" : "Mostrar o que foi digitado"} aria-pressed={show}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />{show && <path d="M3 3l18 18" />}
+        </svg>
+      </button>
+    </span>
+  );
+}
