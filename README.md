@@ -51,6 +51,10 @@ python e2e/fluxos.py http://localhost:3100
 
 Escrito conforme a documentação oficial e testado apenas com a Meta **simulada**. Nunca rodou contra uma conta real.
 
+## Busca pelo nome no Google
+
+Opcional e gratuito, só leitura: passo a passo em `replica/guia-gratis.md`, seção 4.
+
 ## Sem custo
 
 Nada aqui cobra: dados no seu computador, textos por modelo local, publicação pela API oficial da Meta e, se você quiser, IA no plano gratuito. Passo a passo em [`replica/guia-gratis.md`](replica/guia-gratis.md).

@@ -1,4 +1,4 @@
-# Ligar o Instagram e a IA sem gastar
+# Ligar o Instagram, a IA e o Google sem gastar
 
 Os dois passos são feitos por você, porque exigem a sua conta e a sua senha. Os nomes dos botões nos sites podem ter mudado.
 
@@ -57,3 +57,21 @@ Com a conta real conectada: **Planejador editorial**, envie o vídeo, escolha o 
 - Com mais de 6 horas de atraso ele não publica e marca como atrasado.
 - Se falhar, ele não tenta de novo sozinho, para nunca publicar em dobro.
 - Faça o primeiro teste com um vídeo que não tenha problema se for ao ar.
+
+## 4. Google: busca pelo seu nome (gratuito)
+
+Mostra em **Métricas** quantas vezes o seu site apareceu nas buscas pelo seu nome, os cliques, as visitas vindas do Google e os cliques no WhatsApp. O app só lê. Use a conta do Google que é dona do Search Console e do Analytics do site. Os nomes dos menus do Google mudam de tempos em tempos.
+
+1. **Site verificado:** abra [search.google.com/search-console](https://search.google.com/search-console). O seu site precisa aparecer na lista, sem pedido de verificação.
+2. **Projeto novo:** em [console.cloud.google.com/projectcreate](https://console.cloud.google.com/projectcreate), crie o projeto `radar-viral` e deixe-o selecionado. Não é preciso ativar faturamento.
+3. **Ligue as 3 APIs, antes de autorizar** (botão Ativar em cada uma):
+   - [Search Console API](https://console.cloud.google.com/apis/library/searchconsole.googleapis.com)
+   - [Google Analytics Data API](https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com)
+   - [Google Analytics Admin API](https://console.cloud.google.com/apis/library/analyticsadmin.googleapis.com)
+4. **Tela de autorização:** em [console.cloud.google.com/auth/overview](https://console.cloud.google.com/auth/overview), comece a configuração: nome `Radar Viral`, o seu e-mail, público **Externo**. Em Branding, informe a página inicial `https://cloneviralapp.vercel.app` e a política de privacidade `https://cloneviralapp.vercel.app/privacidade`. Não envie logotipo.
+5. **Publique:** em [Público-alvo](https://console.cloud.google.com/auth/audience), toque em **Publicar app** (status "Em produção"). Em modo de teste a conexão cai a cada 7 dias.
+6. **Cliente:** em [Clientes](https://console.cloud.google.com/auth/clients), crie um cliente OAuth do tipo **Aplicativo da Web**. Em URIs de redirecionamento autorizados, cole `https://cloneviralapp.vercel.app/api/google/callback`. Copie o ID e a chave secreta (a chave pode aparecer só nessa hora).
+7. No app, em **Conexões**, grave o ID e a chave em **Seu app do Google** e toque em **Conectar Google**. Se aparecer "o Google não verificou este app", toque em **Avançado** e siga para o app: o app é seu. Marque **as duas** permissões.
+8. Escolha o site, a propriedade do Analytics, confira o nome pesquisado e toque em **Salvar**. Os números aparecem em **Métricas**.
+
+A chave secreta é digitada só na tela do app, nunca em conversa.

@@ -40,6 +40,7 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 - **Agendador** (`instrumentation.ts` + `lib/scheduler.ts`): só com `RV_SCHEDULER=1` (o atalho local liga); publica o vencido a cada minuto e coleta os números uma vez por dia.
 - **Métricas** (`lib/metrics.ts`): funções puras sobre posts, snapshots e audiência. `tests/metrics.test.ts` fixa os números observados na tela original; mudança de fórmula tem de ser conferida com `replica/recon.md`. O terceiro sinal da autenticidade (comentários por curtida) é hipótese não confirmada.
 - **Instagram** (`lib/instagram.ts`): OAuth do Facebook Login + Graph API, token em AES-256-GCM com chave derivada de `RV_SECRET` (obrigatória em produção). `syncAccount` tem prazo e devolve `partial`; conta grande retoma a lista pelo `listCursor` gravado na conexão (sem a chave); `syncAll` serve `/api/cron/sync`. Os testes simulam o `fetch`.
+- **Google** (`lib/google.ts`, `lib/googleData.ts`): OAuth somente leitura (Search Console e Analytics), só para o dono; app e token cifrados em `google_app` e `google_connection`. Números consultados na hora, sem guardar; fonte que falha vira aviso e `--`. Site e propriedade são escolhidos pelo dono, nunca "o primeiro da lista".
 - **Sessão** (`lib/auth.ts`): scrypt, cookie `rv_session`, hash do token em `sessions`.
 
 ## Regras que o código já garante (não desfazer)
@@ -64,7 +65,7 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 
 ## Limitações abertas
 
-Instagram: conexão, coleta e consulta de um perfil de referência provados com a conta real em 27/11/2026; publicação, anúncios e sugestão de perfis, não. De IA, só o Gemini gratuito foi provado com chave real em 27/11/2026 (texto com `gemini-3.6-flash` e `gemini-3.5-flash-lite`; vídeo curto no próprio pedido); envio pela API de arquivos e os outros provedores, não. Publicado na Vercel com Supabase real (ver `replica/deploy.md`). No site, o vídeo vai em pedaços para o banco (`lib/videos.ts`) e a publicação é chamada pelo GitHub Actions.
+Google: só testado com respostas simuladas até a primeira conexão real. Instagram: conexão, coleta e consulta de um perfil de referência provados com a conta real em 27/11/2026; publicação, anúncios e sugestão de perfis, não. De IA, só o Gemini gratuito foi provado com chave real em 27/11/2026 (texto com `gemini-3.6-flash` e `gemini-3.5-flash-lite`; vídeo curto no próprio pedido); envio pela API de arquivos e os outros provedores, não. Publicado na Vercel com Supabase real (ver `replica/deploy.md`). No site, o vídeo vai em pedaços para o banco (`lib/videos.ts`) e a publicação é chamada pelo GitHub Actions.
 
 ## Pipeline replica e regras do projeto
 
