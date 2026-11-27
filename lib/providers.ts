@@ -13,7 +13,7 @@ export type Provider = { id: string; kind: Kind; label: string; paid: boolean; a
 const GEMINI_KEY = "https://aistudio.google.com/apikey";
 const OPENAI_KEY = "https://platform.openai.com/api-keys";
 export const PROVIDERS: Provider[] = [
-  { id: "gemini-gratis", kind: "text", label: "Gemini, plano gratuito", paid: false, api: "gemini", models: ["gemini-3.8-flash", "gemini-4-hydrogen", "gemini-3.5-flash-lite"], keyUrl: GEMINI_KEY, note: "Recomendado para começar. Use uma chave de projeto sem faturamento. No gratuito, o Google pode usar o texto enviado para melhorar os produtos: não envie dados de pacientes ou clientes." },
+  { id: "gemini-gratis", kind: "text", label: "Gemini, plano gratuito", paid: false, api: "gemini", models: ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-4-hydrogen"], keyUrl: GEMINI_KEY, note: "Recomendado para começar. Use uma chave de projeto sem faturamento. No gratuito, o Google pode usar o texto enviado para melhorar os produtos: não envie dados de pacientes ou clientes." },
   { id: "groq-gratis", kind: "text", label: "Groq, plano gratuito", paid: false, api: "chat", base: "https://api.groq.com/openai/v1", models: ["openai/gpt-oss-120b", "openai/gpt-oss-20b"], keyUrl: "https://console.groq.com/keys", note: "Reserva gratuita e rápida, com limite diário. Confira o limite no painel da Groq." },
   { id: "anthropic", kind: "text", label: "Claude (Anthropic), pago", paid: true, api: "anthropic", models: ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"], keyUrl: "https://platform.claude.com/settings/keys", note: "Sugestão paga para a melhor escrita: claude-opus-5-5. Equilíbrio entre preço e qualidade: claude-sonnet-5-5." },
   { id: "openai", kind: "text", label: "OpenAI, pago", paid: true, api: "chat", base: "https://api.openai.com/v1", models: ["gpt-6.2-sol", "gpt-6.2-astra", "gpt-6-luna"], keyUrl: OPENAI_KEY, note: "gpt-6.2-astra é o modelo principal; gpt-6.2-sol é o de uso diário; gpt-6-luna é o mais barato." },
@@ -120,7 +120,18 @@ const textOf = (list: any[]) => list.filter((p) => p?.type === "text" || (!p?.ty
 export async function askText(cfg: AiCfg, system: string, user: string, timeoutMs = 90000): Promise<string> {
   const { api, base } = cfg.provider;
   let text = "";
-  if (api === "gemini") text = textOf(parts(await gemini(cfg.key, { model: cfg.model, system_instruction: system, input: user }, timeoutMs)));
+  if (api === "gemini") {
+    // no gratuito um modelo lotado (503) é comum: tenta os outros modelos gratuitos da lista
+    const models = cfg.provider.paid ? [cfg.model] : [cfg.model, ...cfg.provider.models.filter((m) => m !== cfg.model)];
+    for (let i = 0; ; i++) {
+      try {
+        text = textOf(parts(await gemini(cfg.key, { model: models[i], system_instruction: system, input: user }, timeoutMs)));
+        break;
+      } catch (e: any) {
+        if (i + 1 >= models.length || !/respondeu 503/.test(String(e?.message))) throw e;
+      }
+    }
+  }
   else if (api === "anthropic") {
     const j = await call("https://api.anthropic.com/v1/messages", json({ "x-api-key": cfg.key, "anthropic-version": "2023-06-01" }, { model: cfg.model, max_tokens: 16000, system, messages: [{ role: "user", content: user }] }), timeoutMs);
     text = (j.content ?? []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("");

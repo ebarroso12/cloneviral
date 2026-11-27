@@ -64,7 +64,7 @@ test("IA: cada provedor recebe o pedido no formato dele", async () => {
   await withFetch(() => out("oi"), async (calls) => {
     assert.equal(await p.askText(cfg("text", "gemini-gratis"), "sis", "usr"), "oi");
     assert.equal(calls[0].url.pathname, "/v1beta/interactions");
-    assert.deepEqual([calls[0].body.model, calls[0].body.system_instruction, calls[0].body.input], ["gemini-3.8-flash", "sis", "usr"]);
+    assert.deepEqual([calls[0].body.model, calls[0].body.system_instruction, calls[0].body.input], ["gemini-3.6-flash", "sis", "usr"]);
   });
   await withFetch(() => ({ body: { choices: [{ message: { content: "oi" } }] } }), async (calls) => {
     await p.askText(cfg("text", "groq-gratis"), "sis", "usr");
@@ -88,6 +88,25 @@ test("IA: cada provedor recebe o pedido no formato dele", async () => {
   });
   await withFetch(() => ({ status: 401, body: { error: { message: "chave inválida" } } }), async () => {
     await assert.rejects(() => p.askText(cfg("text", "openai"), "s", "u"), /401: chave inválida/);
+  });
+});
+
+test("Gemini gratuito lotado tenta outro modelo; outro erro não insiste; pago não troca", async () => {
+  const p = await import("../lib/providers");
+  const free = p.findProvider("text", "gemini-gratis")!;
+  const cfg = { provider: free, model: free.models[0], key: KEY, account: "" };
+  await withFetch((c) => (c.body.model === free.models[0] ? { status: 503, body: {} } : out("oi")), async (calls) => {
+    assert.equal(await p.askText(cfg, "s", "u"), "oi");
+    assert.deepEqual(calls.map((c) => c.body.model), free.models.slice(0, 2));
+  });
+  await withFetch(() => ({ status: 429, body: {} }), async (calls) => {
+    await assert.rejects(() => p.askText(cfg, "s", "u"), /429/);
+    assert.equal(calls.length, 1);
+  });
+  const paid = p.findProvider("text", "gemini-pago")!;
+  await withFetch(() => ({ status: 503, body: {} }), async (calls) => {
+    await assert.rejects(() => p.askText({ ...cfg, provider: paid, model: paid.models[0] }, "s", "u"), /503/);
+    assert.equal(calls.length, 1);
   });
 });
 

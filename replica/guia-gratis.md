@@ -38,14 +38,14 @@ No app, abra **IA e integrações**. Em cada quadro escolha o provedor, cole a c
 
 | para | sem custo | pegar a chave |
 | --- | --- | --- |
-| texto | Gemini, plano gratuito (`gemini-3.8-flash`) | https://aistudio.google.com/apikey |
+| texto | Gemini, plano gratuito (`gemini-3.6-flash`) | https://aistudio.google.com/apikey |
 | vídeo | Gemini, plano gratuito (`gemini-3.5-flash-lite`), a mesma chave | https://aistudio.google.com/apikey |
 | imagem | Cloudflare Workers AI (FLUX): ID da conta e token | https://dash.cloudflare.com/profile/api-tokens |
 | texto, reserva | Groq, plano gratuito | https://console.groq.com/keys |
 
 Pagas, só se você marcar a autorização de cobrança (valem só para a conta do dono): Claude (`claude-opus-5-5` ou `claude-sonnet-5-5`), OpenAI (`gpt-6.2-sol`; imagem `gpt-image-2.5-sunburst`), Gemini 4 (`gemini-4-carbon`, preço dobra em 01/12/2026) e Nano Banana 2.1 para imagem.
 
-- Modelos e formatos conferidos nas páginas oficiais em 27/11/2026; **nenhum foi testado com chave real**. Use o botão **Testar**.
+- Modelos e formatos conferidos nas páginas oficiais em 27/11/2026. Com chave real, só o Gemini gratuito foi testado (texto e vídeo curto); os demais, não. Use o botão **Testar**.
 - Gemini: crie a chave em um projeto **sem faturamento ativado**, ou o uso passa a ser cobrado.
 - No plano gratuito o provedor pode usar o que for enviado. **Não envie dados nem vídeos de pacientes ou clientes.**
 
