@@ -83,7 +83,7 @@ export default function GoogleBlock() {
             </div>
           )}
           <p className="tiny dim" style={{ marginTop: 10 }}>{s ? "Na busca gratuita, os dois primeiros números são só das buscas com o nome. Os dois últimos contam todas as visitas vindas da busca do Google: o Analytics não informa a palavra pesquisada." : "A busca gratuita conta todas as visitas vindas da busca do Google, não só as de quem procurou o seu nome. A busca pelo nome aparece aqui quando o site for verificado no Search Console e escolhido na tela Conexões."}</p>
-          <p className="tiny dim">{s && "Os dados da busca chegam com alguns dias de atraso e o Google esconde buscas muito raras. "}O Analytics só conta a partir de quando a medição foi instalada no site.</p>
+          <p className="tiny dim">{s ? "Os dados da busca chegam com alguns dias de atraso, por isso o período inteiro termina três dias atrás. O Google esconde buscas muito raras. " : "O período vai até ontem, e o número do último dia ainda pode mudar. "}O Analytics só conta a partir de quando a medição foi instalada no site.</p>
         </>
       )}
     </section>

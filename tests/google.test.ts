@@ -311,3 +311,78 @@ test("Search Console indisponível não impede escolher a propriedade", async ()
     await rejects(d.saveGoogleSettings("dono", { siteUrl: SITE }), 400);
   });
 });
+
+// ---------- revisão de código de 27/11/2026 ----------
+const OTHER = "999-outro.apps.googleusercontent.com";
+
+test("site gravado continua salvável quando o Search Console falha", async () => {
+  const { s, d } = await chosen();
+  const semBusca = (c: Call): Reply => (c.url.pathname === "/webmasters/v3/sites" ? { status: 500, body: {} } : numbers(c));
+  await withFetch(semBusca, async () => {
+    await d.saveGoogleSettings("dono", { siteUrl: SITE, propertyId: "111" });
+    await rejects(d.saveGoogleSettings("dono", { siteUrl: "https://alheio.test/" }), 400);
+  });
+  const [doc] = await s.list("google_connection", "dono");
+  assert.equal(doc.propertyId, "111");
+  assert.equal(doc.siteUrl, SITE);
+});
+
+test("trocar o ID do cliente pede nova conexão; trocar só a chave não", async () => {
+  const { s, g } = await connected();
+  await g.saveGoogleApp("dono", { clientId: CLIENT, secret: SECRET + "x" });
+  assert.equal((await g.googleStatus("dono")).status, "connected");
+  await g.saveGoogleApp("dono", { clientId: OTHER, secret: SECRET });
+  assert.equal((await g.googleStatus("dono")).status, "reautorizar");
+  assert.equal((await s.list("google_connection", "dono"))[0].token, null);
+});
+
+test("chave em branco mantém a gravada; sem nada gravado é recusada", async () => {
+  const { s, g } = await connected();
+  const antes = (await s.list("google_app", "dono"))[0].secret;
+  await g.saveGoogleApp("dono", { clientId: OTHER, secret: "" });
+  const [app] = await s.list("google_app", "dono");
+  assert.equal(app.secret, antes);
+  assert.equal(app.clientId, OTHER);
+  await s.removeAllForUser("google_app", "dono");
+  await rejects(g.saveGoogleApp("dono", { clientId: CLIENT, secret: "" }), 400);
+});
+
+test("unauthorized_client vira reautorizar; invalid_client pede gravar a chave de novo", async () => {
+  let { g } = await connected();
+  await withFetch(() => ({ status: 401, body: { error: "invalid_client" } }), () => rejects(g.accessToken("dono"), 409, /chave secreta/));
+  assert.equal((await g.googleStatus("dono")).status, "connected");
+  await withFetch(() => ({ status: 400, body: { error: "unauthorized_client" } }), () => rejects(g.accessToken("dono"), 409));
+  assert.equal((await g.googleStatus("dono")).status, "reautorizar");
+});
+
+test("o que não dá para decifrar vira aviso em português, sem erro 500", async () => {
+  const { s, g } = await connected();
+  const [app] = await s.list("google_app", "dono");
+  await s.update("google_app", app.id, "dono", { secret: "lixo" });
+  await rejects(g.accessToken("dono"), 409, /Grave de novo/);
+  await connected();
+  const [conn] = await s.list("google_connection", "dono");
+  await s.update("google_connection", conn.id, "dono", { token: "lixo" });
+  await rejects(g.accessToken("dono"), 409, /Conecte de novo/);
+  assert.equal((await g.googleStatus("dono")).status, "reautorizar");
+});
+
+test("sem site o Analytics vai até ontem, no horário do Brasil", async () => {
+  const { reportRange } = await import("../lib/googleData");
+  assert.deepEqual(reportRange(7, new Date("2026-11-27T12:00:00Z"), 1), { start: "2026-11-20", end: "2026-11-26" });
+  assert.equal(reportRange(7, new Date("2026-11-27T01:00:00Z"), 1).end, "2026-11-25");
+  const { d } = await chosen();
+  const comSite = await withFetch(numbers, () => d.googleReport("dono", 7));
+  await withFetch(numbers, () => d.saveGoogleSettings("dono", { siteUrl: "", propertyId: "222" }));
+  const semSite = await withFetch(numbers, () => d.googleReport("dono", 7));
+  assert.equal((Date.parse(semSite.end) - Date.parse(comSite.end)) / 86400000, 2);
+});
+
+test("sem APP_URL o endereço de retorno usa o endereço do pedido", async () => {
+  const { appOrigin } = await import("../lib/config");
+  const h = (o: Record<string, string>) => ({ get: (n: string) => o[n] ?? null });
+  assert.equal(appOrigin({ APP_URL: "https://app.test" }, h({ host: "outro.test" })), "https://app.test");
+  assert.equal(appOrigin({}, h({ host: "interno", "x-forwarded-host": "site.test", "x-forwarded-proto": "https" })), "https://site.test");
+  assert.equal(appOrigin({}, h({ host: "localhost:3000" })), "http://localhost:3000");
+  assert.equal(appOrigin({}, h({ host: "site.test" })), "https://site.test");
+});

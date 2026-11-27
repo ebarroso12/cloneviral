@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Custo zero; nenhuma dependência nova.
-- Repositório público: sem chave, token, ID de propriedade ou dado pessoal no código (a sugestão "edson barroso" vem do nome da conta do dono, não de texto fixo).
+- Repositório público: sem chave, token, ID de propriedade ou dado pessoal no código (a sugestão do nome vem da conta do dono, não de texto fixo).
 - Escopos exatos: `https://www.googleapis.com/auth/webmasters.readonly` e `https://www.googleapis.com/auth/analytics.readonly`.
 - Retorno: `<APP_URL>/api/google/callback`.
 - Só o dono configura, conecta e vê. Segredo e token cifrados com `encrypt` de `lib/instagram.ts` e nunca saem para o navegador.

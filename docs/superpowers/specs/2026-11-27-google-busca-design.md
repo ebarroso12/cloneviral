@@ -3,7 +3,7 @@
 Data: 27/11/2026. Estado: aprovado pelo dono em 27/11/2026.
 
 ## Intenção
-Ver no Radar Viral o caminho: busca pelo nome no Google → clique → chegada ao site www.dredsonbarroso.com.br.
+Ver no Radar Viral o caminho: busca pelo nome no Google → clique → chegada ao site do dono.
 
 ## Objetivos
 - Botão "Conectar Google" (somente leitura) na tela Conexões, com "Desconectar".
@@ -13,7 +13,7 @@ Ver no Radar Viral o caminho: busca pelo nome no Google → clique → chegada a
   3. visitas ao site vindas da busca orgânica do Google (Analytics);
   4. cliques no WhatsApp nessas visitas (evento `generate_lead`, Analytics) — proposta do agente.
 - Lista dos termos buscados que contêm o nome.
-- Termo do nome editável (proposta inicial: "edson barroso").
+- Termo do nome editável (proposta inicial: o nome da conta do dono).
 
 ## Não objetivos
 Google Meu Negócio (cota zero), Google Ads, alterar o site, gravar qualquer coisa na conta Google, outros clientes além do dono.

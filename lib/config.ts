@@ -39,3 +39,11 @@ export function avisoSemMeta({ demo, site }: { demo: boolean; site: boolean }) {
   const base = `A conexão com o Instagram ainda não foi ligada ${site ? "neste site" : "neste computador"}. Falta criar o seu app gratuito na Meta e informar o ID e a chave secreta dele no quadro Seu app da Meta.`;
   return demo ? `${base} Os números que aparecem são da conta de demonstração.` : base;
 }
+
+/** Endereço público do app: o configurado, ou o do próprio pedido. */
+export function appOrigin(env: Env, headers: { get(name: string): string | null }) {
+  if (env.APP_URL) return env.APP_URL;
+  const host = headers.get("x-forwarded-host") || headers.get("host") || "localhost:3000";
+  const proto = headers.get("x-forwarded-proto") || (/^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? "http" : "https");
+  return `${proto}://${host}`;
+}

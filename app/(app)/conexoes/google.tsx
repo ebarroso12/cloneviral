@@ -21,12 +21,16 @@ export default function GoogleCard({ status, redirect, flash }: { status: Status
   useEffect(() => {
     if (!connected) return;
     setOptionsError("");
-    api<Options>("/api/google/options").then(setOptions).catch((e) => { setOptionsError(e.message); r.refresh(); });
+    api<Options>("/api/google/options").then((o) => {
+      setOptions(o);
+      // escolha que sumiu da conta é limpa, para não ser enviada escondida
+      setPick((p) => ({ ...p, siteUrl: o.sitesError || o.sites.includes(p.siteUrl) ? p.siteUrl : "", propertyId: o.properties.some((x) => x.id === p.propertyId) ? p.propertyId : "" }));
+    }).catch((e) => { setOptionsError(e.message); r.refresh(); });
   }, [connected, r]);
 
   const run = async (path: string, body: unknown, ok: string) => {
     setBusy(true);
-    try { await api(path, { body }); toast(ok); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); }
+    try { await api(path, { body }); toast(ok); r.refresh(); return true; } catch (e: any) { toast(e.message, "err"); return false; } finally { setBusy(false); }
   };
   const missing = connected && !status.propertyId;
 
@@ -45,9 +49,9 @@ export default function GoogleCard({ status, redirect, flash }: { status: Status
           <li>Em URIs de redirecionamento autorizados, cole: <code style={{ wordBreak: "break-all" }}>{redirect}</code></li>
           <li>Copie o ID do cliente e a chave secreta e cole abaixo.</li>
         </ol>
-        <form onSubmit={(e) => { e.preventDefault(); run("/api/google/app", app, "App do Google gravado."); setApp({ ...app, secret: "" }); }}>
+        <form onSubmit={async (e) => { e.preventDefault(); if (await run("/api/google/app", app, "App do Google gravado.")) setApp({ ...app, secret: "" }); }}>
           <div className="field"><label htmlFor="gid">ID do cliente</label><input id="gid" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={app.clientId} onChange={(e) => setApp({ ...app, clientId: e.target.value })} required /></div>
-          <div className="field"><label htmlFor="gse">Chave secreta do cliente {status.configured && "(preencha só para trocar)"}</label><PasswordInput id="gse" autoComplete="off" value={app.secret} onChange={(e) => setApp({ ...app, secret: e.target.value })} required /></div>
+          <div className="field"><label htmlFor="gse">Chave secreta do cliente {status.configured && "(preencha só para trocar)"}</label><PasswordInput id="gse" autoComplete="off" value={app.secret} onChange={(e) => setApp({ ...app, secret: e.target.value })} required={!status.configured} /></div>
           <button className="btn primary" disabled={busy}>Salvar app</button>
         </form>
       </details>
@@ -61,7 +65,7 @@ export default function GoogleCard({ status, redirect, flash }: { status: Status
               {options.sitesError && <p className="small err">Não deu para ler o Search Console: {options.sitesError}</p>}
               {!options.sitesError && options.sites.length === 0 && <p className="muted small">Nenhum site verificado no Search Console. As visitas e o WhatsApp funcionam mesmo assim.</p>}
               {options.properties.length === 0 && <p className="small err">Nenhuma propriedade do Analytics nesta conta.</p>}
-              <div className="field"><label htmlFor="gsite">Site (Search Console), opcional</label><select id="gsite" value={pick.siteUrl} onChange={(e) => setPick({ ...pick, siteUrl: e.target.value })}><option value="">Sem site verificado por enquanto</option>{options.sites.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+              <div className="field"><label htmlFor="gsite">Site (Search Console), opcional</label><select id="gsite" value={pick.siteUrl} onChange={(e) => setPick({ ...pick, siteUrl: e.target.value })}><option value="">Sem site verificado por enquanto</option>{options.sitesError && status.siteUrl && <option value={status.siteUrl}>{status.siteUrl} (salvo)</option>}{options.sites.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
               <div className="field"><label htmlFor="gprop">Propriedade do Analytics</label><select id="gprop" value={pick.propertyId} onChange={(e) => setPick({ ...pick, propertyId: e.target.value })} required><option value="">Escolha...</option>{options.properties.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}</select></div>
               {pick.siteUrl && <div className="field"><label htmlFor="gterm">Nome pesquisado</label><input id="gterm" maxLength={60} value={pick.term} onChange={(e) => setPick({ ...pick, term: e.target.value })} required /></div>}
             </>

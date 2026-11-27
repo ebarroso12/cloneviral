@@ -322,3 +322,23 @@ test("lentidão: modelo gratuito que demora cede a vez ao próximo; o segundo us
     assert.equal(models.length, 1);
   });
 });
+
+test("texto: modelo que manda o cabeçalho e demora no corpo também cede a vez", async () => {
+  const { askText, findProvider } = await import("../lib/providers");
+  const provider = findProvider("text", "gemini-gratis")!;
+  const real = globalThis.fetch;
+  const used: string[] = [];
+  const alive = setInterval(() => {}, 1000);
+  globalThis.fetch = (async (_u: any, init: any) => {
+    used.push(JSON.parse(init.body).model);
+    if (used.length > 1) return new Response(JSON.stringify(out("pronto").body), { status: 200 });
+    return { ok: true, status: 200, json: () => new Promise((_, no) => init.signal.addEventListener("abort", () => no(init.signal.reason))) };
+  }) as any;
+  try {
+    assert.equal(await askText({ provider, model: provider.models[0], key: KEY, account: "" }, "s", "u", 5000, 50), "pronto");
+    assert.equal(used.length, 2);
+  } finally {
+    globalThis.fetch = real;
+    clearInterval(alive);
+  }
+});

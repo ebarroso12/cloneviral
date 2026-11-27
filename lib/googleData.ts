@@ -7,6 +7,7 @@ const SEARCH_API = "https://www.googleapis.com/webmasters/v3/sites";
 const ADMIN_API = "https://analyticsadmin.googleapis.com/v1beta/accountSummaries";
 const DATA_API = "https://analyticsdata.googleapis.com/v1beta/properties";
 const LAG_DAYS = 3; // a busca do Google fecha os números com alguns dias de atraso
+const BRAZIL = 3 * 3600000; // "ontem" é o do dono, que está três horas atrás do servidor
 
 async function call(token: string, url: string, body?: unknown): Promise<any> {
   const r = await fetch(url, {
@@ -62,10 +63,12 @@ export async function saveGoogleSettings(userId: string, b: { siteUrl?: unknown;
     data.term = term;
   }
   if (b.siteUrl !== undefined || b.propertyId !== undefined) {
-    const { sites, properties } = await googleOptions(userId);
+    const { sites, properties, sitesError } = await googleOptions(userId);
     if (b.siteUrl !== undefined) {
       const siteUrl = String(b.siteUrl);
-      if (siteUrl && !sites.includes(siteUrl)) throw new HttpError(400, "Esse site não está verificado nesta conta do Google.");
+      // sem a lista (Search Console falhou), o site que já estava gravado continua valendo
+      const kept = !!sitesError && siteUrl === conn.siteUrl;
+      if (siteUrl && !kept && !sites.includes(siteUrl)) throw new HttpError(400, "Esse site não está verificado nesta conta do Google.");
       data.siteUrl = siteUrl;
     }
     if (b.propertyId !== undefined) {
@@ -80,8 +83,8 @@ export async function saveGoogleSettings(userId: string, b: { siteUrl?: unknown;
 
 const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
 
-export function reportRange(days: 7 | 28 | 90, now = new Date()) {
-  const end = now.getTime() - LAG_DAYS * 86400000;
+export function reportRange(days: 7 | 28 | 90, now = new Date(), lag = LAG_DAYS) {
+  const end = now.getTime() - BRAZIL - lag * 86400000;
   return { start: iso(end - (days - 1) * 86400000), end: iso(end) };
 }
 
@@ -133,7 +136,8 @@ export async function googleReport(userId: string, days: 7 | 28 | 90) {
   // filtro vazio traria todas as buscas e a tela as mostraria como buscas pelo nome
   if (s.status === "connected" && s.siteUrl && !s.term) throw new HttpError(409, "Escreva o nome pesquisado na tela Conexões.");
   const token = await accessToken(userId);
-  const range = reportRange(days);
+  // o atraso é da busca: sem ela, o Analytics vai até ontem
+  const range = reportRange(days, new Date(), s.siteUrl ? LAG_DAYS : 1);
   const [search, site] = await Promise.all([
     // sem site verificado não há números de busca: null, nunca zero
     s.siteUrl ? part(() => searchNumbers(token, s.siteUrl, s.term, range)) : Promise.resolve(null),

@@ -3,7 +3,8 @@ import { getStore } from "@/lib/store";
 import { metaStatus } from "@/lib/metaApp";
 import { isOwner } from "@/lib/invites";
 import { googleStatus } from "@/lib/google";
-import { avisoSemMeta } from "@/lib/config";
+import { appOrigin, avisoSemMeta } from "@/lib/config";
+import { headers } from "next/headers";
 import ConexoesView from "./view";
 export const dynamic = "force-dynamic";
 export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -14,7 +15,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const [ads] = await s.list("ads_connection", u.id);
   const [pending] = await s.list("ig_pending", u.id);
   const app = await metaStatus();
-  const origin = process.env.APP_URL || (process.env.VERCEL ? "" : "http://localhost:3000");
+  const origin = appOrigin(process.env, await headers());
   const choices = pending && sp.escolher ? JSON.parse(JSON.stringify(pending.accounts)) : null;
   const owner = await isOwner(u.id);
   const google = owner ? { status: await googleStatus(u.id), redirect: `${origin}/api/google/callback` } : null;

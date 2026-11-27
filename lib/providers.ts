@@ -113,8 +113,10 @@ export async function saveAi(userId: string, b: Record<string, unknown>) {
 
 // ---------- chamadas ----------
 async function call(url: string, init: RequestInit, timeoutMs: number): Promise<any> {
-  const res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
-  const j: any = await res.json().catch(() => null);
+  const signal = AbortSignal.timeout(timeoutMs);
+  const res = await fetch(url, { ...init, signal });
+  // prazo estourado no meio do corpo é demora, não resposta ilegível
+  const j: any = await res.json().catch(() => { if (signal.aborted) throw signal.reason; return null; });
   if (!res.ok || !j) throw new Error(`A IA respondeu ${res.status}${j?.error?.message ? ": " + String(j.error.message).slice(0, 160) : j?.errors?.[0]?.message ? ": " + String(j.errors[0].message).slice(0, 160) : ""}`);
   return j;
 }

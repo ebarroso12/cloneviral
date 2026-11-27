@@ -21,10 +21,14 @@ export async function saveGoogleApp(userId: string, b: { clientId?: unknown; sec
   const clientId = String(b.clientId ?? "").trim();
   const secret = String(b.secret ?? "").trim();
   if (!/^[\w-]+\.apps\.googleusercontent\.com$/.test(clientId)) throw new HttpError(400, "O ID do cliente termina em .apps.googleusercontent.com. Copie de novo no Google Cloud.");
-  if (!/^[\w-]{20,100}$/.test(secret)) throw new HttpError(400, "A chave secreta do cliente não parece completa. Copie de novo no Google Cloud.");
-  const store = getStore();
-  const doc = { clientId, secret: encrypt(secret) };
   const cur = await appDoc(userId);
+  // em branco mantém a chave já gravada
+  if ((secret || !cur) && !/^[\w-]{20,100}$/.test(secret)) throw new HttpError(400, "A chave secreta do cliente não parece completa. Copie de novo no Google Cloud.");
+  const store = getStore();
+  const doc = { clientId, secret: secret ? encrypt(secret) : String(cur!.secret) };
+  const conn = await connDoc(userId);
+  // a autorização vale para um cliente: com outro ID é preciso conectar de novo
+  if (cur && cur.clientId !== clientId && conn?.status === "connected") await store.update("google_connection", conn.id, userId, { status: "reautorizar", token: null });
   if (cur) await store.update("google_app", cur.id, userId, doc);
   else await store.insert("google_app", userId, doc, scopedId(userId, "google_app"));
 }
@@ -54,10 +58,23 @@ export function googleAuthUrl(redirect: string, state: string, clientId: string)
   return `https://accounts.google.com/o/oauth2/v2/auth?${q}`;
 }
 
+const BAD_SECRET = "A chave secreta do app do Google não serve mais. Grave de novo em Seu app do Google, na tela Conexões.";
+
+/** null quando o texto gravado não abre (por exemplo, o segredo do servidor mudou). */
+function open(payload: string) {
+  try {
+    return decrypt(payload);
+  } catch {
+    return null;
+  }
+}
+
 async function credentials(userId: string) {
   const app = await appDoc(userId);
   if (!app) throw new HttpError(409, "Grave primeiro o seu app do Google na tela Conexões.");
-  return { client_id: String(app.clientId), client_secret: decrypt(app.secret) };
+  const secret = open(String(app.secret));
+  if (secret === null) throw new HttpError(409, BAD_SECRET);
+  return { client_id: String(app.clientId), client_secret: secret };
 }
 
 async function tokenRequest(form: Record<string, string>) {
@@ -88,11 +105,16 @@ export async function accessToken(userId: string): Promise<string> {
   const again = "A autorização do Google venceu ou foi retirada. Conecte de novo na tela Conexões.";
   if (c?.status === "reautorizar") throw new HttpError(409, again);
   if (c?.status !== "connected" || !c.token) throw new HttpError(409, "Conecte o Google na tela Conexões.");
-  const r = await tokenRequest({ ...(await credentials(userId)), grant_type: "refresh_token", refresh_token: decrypt(c.token) });
-  if (r.j?.error === "invalid_grant") {
+  const reauthorize = async () => {
     await getStore().update("google_connection", c.id, userId, { status: "reautorizar" });
-    throw new HttpError(409, again);
-  }
+    return new HttpError(409, again);
+  };
+  const app = await credentials(userId);
+  const refresh = open(String(c.token));
+  if (refresh === null) throw await reauthorize();
+  const r = await tokenRequest({ ...app, grant_type: "refresh_token", refresh_token: refresh });
+  if (r.j?.error === "invalid_grant" || r.j?.error === "unauthorized_client") throw await reauthorize();
+  if (r.j?.error === "invalid_client") throw new HttpError(409, BAD_SECRET);
   if (!r.ok || !r.j.access_token) throw new HttpError(502, `O Google não renovou o acesso: ${reason(r)}`);
   return String(r.j.access_token);
 }
