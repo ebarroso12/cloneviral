@@ -24,7 +24,7 @@ Permissões usadas: `instagram_basic`, `instagram_manage_insights`, `instagram_c
 
 Não cole a chave secreta em conversas nem a envie para o GitHub.
 
-**Isto nunca foi testado com uma conta real.** Se aparecer erro, copie a mensagem (sem chaves) e me mande.
+Conexão e coleta provadas com uma conta real em 27/11/2026. Se aparecer erro, copie a mensagem (sem chaves) e me mande.
 
 ### No site publicado (em vez do computador)
 

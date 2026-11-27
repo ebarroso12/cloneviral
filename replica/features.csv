@@ -2,12 +2,12 @@ feature,area,priority,original,clone,notes
 Menu lateral em 4 fases numeradas + Exclusivos,navegação,must,yes,yes,vira dialog no mobile
 Menu da conta (perfil; Minha conta; Sair),conta,must,yes,yes,sem plano nem créditos
 Login e cadastro por e-mail,conta,must,yes,yes,original não testado: só vi sessão ativa
-Conectar Instagram via OAuth Meta (conta profissional),conexões,must,yes,partial,código pronto; nunca testado com app Meta e conta real
+Conectar Instagram via OAuth Meta (conta profissional),conexões,must,yes,yes,provado com a conta real em 27/11/2026
 Renovar autorização / trocar Página sem apagar histórico,conexões,must,yes,partial,nunca testado com conta real
 Desconectar Instagram,conexões,must,yes,yes,
 "Mostrar ""medindo desde"" e dias medidos",conexões,should,yes,yes,
 Conectar Anúncios Meta (só leitura) para somar visualizações pagas,conexões,could,yes,partial,leitura real (ads_read) testada só com a Meta simulada; falta conta real
-Sincronização do perfil e posts (última sincronização exibida),métricas,must,yes,partial,coleta manual e diária testadas com a Meta simulada; falta conta real
+Sincronização do perfil e posts (última sincronização exibida),métricas,must,yes,yes,coleta real provada em 27/11/2026
 Cartão do perfil (foto; nome; @; bio; link; status Conectado),métricas,must,yes,yes,
 KPI Seguidores,métricas,must,yes,yes,última coleta
 KPI Visualizações (orgânico vida inteira) + tooltip,métricas,must,yes,yes,desde 02/06/2021 no original
