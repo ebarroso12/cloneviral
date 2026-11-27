@@ -44,17 +44,17 @@ Varredura: quantos analisar/gerar e duração,planejar,must,yes,yes,
 Varredura: tema opcional que sobrepõe o assunto,planejar,should,yes,yes,
 Varredura: lista de varreduras e padrões salvos,planejar,must,yes,yes,
 Varredura: reembolso quando rende menos que o previsto,planejar,should,yes,skip,"retirado junto com os créditos em 27/11/2026"
-Sugestão de perfis (12 créditos),planejar,could,yes,no,exige dados de perfis de terceiros
+Sugestão de perfis (12 créditos),planejar,could,yes,partial,"Perfis de referência: dados oficiais pela Meta; sugestão precisa de IA; testado só com Meta simulada"
 Notícias: assuntos + Buscar agora + artigo pronto,planejar,should,yes,yes,busca no feed real testada; o texto de ângulo é modelo curto sem IA
 Ideias: kanban 4 colunas com arrastar,planejar,must,yes,yes,
 Ideia vira roteiro,planejar,should,yes,yes,
 Roteiro: cartão com tipo/destino/duração/gancho,criar,must,yes,yes,
 Roteiro: Abrir/Editar/Copiar/Teleprompter/Já gravei/PDF/Regenerar/Excluir,criar,must,yes,yes,
 Carrossel: escrever slides; aprovar; depois desenhar 1080x1440,criar,must,yes,yes,
-Carrossel: usar padrão da Varredura e idioma,criar,should,yes,partial,padrão ok; outro idioma só com uma IA configurada
+Carrossel: usar padrão da Varredura e idioma,criar,should,yes,partial,"outro idioma e imagem de capa por IA prontos; testados só com a IA simulada"
 Carrossel: 100 modelos em 13 categorias,criar,must,yes,yes,criar catálogo próprio
 Carrossel: foto própria na capa (PNG/JPEG) sem custo,criar,should,yes,yes,
-Carrossel: imagem por IA,criar,could,yes,skip,indisponível no original também
+Carrossel: imagem por IA,criar,could,yes,partial,"indisponível no original; aqui por Cloudflare, Google ou OpenAI, testado só simulado"
 Carrossel: lista de carrosséis salvos,criar,must,yes,yes,
 Série: tema em N capítulos (2 + 1 por capítulo),criar,must,yes,yes,
 Isca de Alto Valor: colar/banco/padrão + palavra-chave + PDF,criar,must,yes,yes,entrega no direct fica fora
@@ -65,10 +65,10 @@ Planejador: vídeos guardados + upload MP4/MOV 100 MB 3 min,publicar,must,yes,ye
 Planejador: publicar como Reels no horário marcado,publicar,must,yes,partial,"envio direto do arquivo e agendador prontos, testados só com a Meta simulada"
 Perfil Pronto (documento entregue pela equipe),exclusivos,could,yes,skip,conteúdo e equipe do original; existe um Perfil Pronto próprio gerado do negócio
 Círculo dos 100: hub com 4 ferramentas,exclusivos,could,yes,yes,
-Sala de Análise de vídeo (resposta em até 3 dias),exclusivos,could,yes,partial,"análise automática de roteiro, arquivo de vídeo e perfil; no original é revisão humana"
+Sala de Análise de vídeo (resposta em até 3 dias),exclusivos,could,yes,partial,"IA assiste ao vídeo (testado só simulado); no original é revisão humana"
 Raio-X do Perfil (6 partes),exclusivos,could,yes,yes,foto e destaques ficam como conferir: o app não avalia imagem
-LazaStory (assistente de Stories),exclusivos,could,yes,partial,original visto de relance
-32 roteiros prontos,exclusivos,could,yes,skip,conteúdo do original
+LazaStory (assistente de Stories),exclusivos,could,yes,yes,"Assistente de Stories próprio: 5 formatos; ajuste por pedido com IA"
+32 roteiros prontos,exclusivos,could,yes,yes,"32 modelos próprios; o conteúdo do original não foi copiado"
 Meu plano: cota; custos; extrato (cobrado/devolvido/usado),plano,must,yes,skip,"retirado em 27/11/2026 a pedido do dono: uso sem limite"
 Trial 30 dias com 30 créditos; START 100 créditos/mês,plano,must,yes,skip,"retirado em 27/11/2026 a pedido do dono: uso sem limite"
 Comprar mais créditos e gerenciar assinatura,plano,must,yes,skip,"retirado em 27/11/2026 a pedido do dono: uso sem limite"

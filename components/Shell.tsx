@@ -6,8 +6,8 @@ import { api } from "@/lib/client";
 
 const NAV: { phase?: string; n?: number; ex?: boolean; items: { href: string; label: string; ic: string; soon?: boolean }[] }[] = [
   { items: [{ href: "/metricas", label: "Métricas", ic: "▦" }] },
-  { n: 1, phase: "CONFIGURAR", items: [{ href: "/conexoes", label: "Conexões", ic: "⚙" }, { href: "/persona", label: "Persona", ic: "☺" }, { href: "/meu-negocio", label: "Meu Negócio", ic: "▤" }, { href: "/identidade-visual", label: "Identidade Visual", ic: "◐" }] },
-  { n: 2, phase: "PLANEJAR", items: [{ href: "/varredura", label: "Varredura", ic: "◎" }, { href: "/noticias", label: "Notícias", ic: "☰" }, { href: "/ideias", label: "Ideias", ic: "✦" }] },
+  { n: 1, phase: "CONFIGURAR", items: [{ href: "/conexoes", label: "Conexões", ic: "⚙" }, { href: "/persona", label: "Persona", ic: "☺" }, { href: "/meu-negocio", label: "Meu Negócio", ic: "▤" }, { href: "/identidade-visual", label: "Identidade Visual", ic: "◐" }, { href: "/ia", label: "IA e integrações", ic: "✺" }] },
+  { n: 2, phase: "PLANEJAR", items: [{ href: "/varredura", label: "Varredura", ic: "◎" }, { href: "/perfis", label: "Perfis de referência", ic: "◉" }, { href: "/noticias", label: "Notícias", ic: "☰" }, { href: "/ideias", label: "Ideias", ic: "✦" }] },
   { n: 3, phase: "CRIAR", items: [{ href: "/roteiro", label: "Roteiro", ic: "✎" }, { href: "/carrossel", label: "Carrossel", ic: "▣" }, { href: "/serie", label: "Série", ic: "≡" }, { href: "/isca", label: "Isca de Alto Valor", ic: "⬇" }, { href: "#", label: "Cortes", ic: "✂", soon: true }] },
   { n: 4, phase: "PUBLICAR", items: [{ href: "/planejador-editorial", label: "Planejador Editorial", ic: "▦" }] },
   { phase: "EXCLUSIVOS", ex: true, items: [{ href: "/meu-perfil-pronto", label: "Perfil Pronto", ic: "★" }, { href: "/clube", label: "Clube Radar", ic: "◌" }] },

@@ -1,21 +1,22 @@
 import { route, loadCtx, bad } from "@/lib/api";
 import { getStore } from "@/lib/store";
-import { applyVoice } from "@/lib/ai";
+import { genStories } from "@/lib/stories";
 
-// Sequência de stories: 5 telas com intenção definida, na voz do negócio.
+export const maxDuration = 120;
+// Assistente de Stories: cria uma sequência ou ajusta uma que já existe.
 export const POST = route(async (user, req) => {
   const b = await req.json();
+  const store = getStore();
+  const ctx = await loadCtx(user.id);
+  if (b.id) {
+    const cur = await store.get("stories", String(b.id));
+    if (!cur || cur.userId !== user.id) bad("Sequência não encontrada.", 404);
+    const instruction = String(b.instruction ?? "").trim().slice(0, 400);
+    if (!instruction) bad("Diga o que ajustar.");
+    const next = await genStories(ctx, { goal: cur!.goal, format: cur!.format, count: cur!.frames.length, previous: cur!.frames, instruction });
+    return store.update("stories", cur!.id, user.id, next);
+  }
   const goal = String(b.goal ?? "").trim().slice(0, 200);
   if (!goal) bad("Diga o objetivo da sequência.");
-  const ctx = await loadCtx(user.id);
-  const dor = (ctx.persona.answers.dor || goal).toLowerCase();
-  const cta = ctx.business.voice?.cta || "Responda esta mensagem para saber mais.";
-  const frames = [
-    { role: "Abertura", text: `Pergunta rápida: você também sente isso? ${dor}` },
-    { role: "Contexto", text: `Eu já vi muita gente travada em ${goal.toLowerCase()}. Vou te mostrar o que mudou o jogo.` },
-    { role: "Virada", text: `O ponto é simples: ${ctx.business.differentiator || "dar um passo pequeno por dia"}.` },
-    { role: "Prova", text: (ctx.business as any).proof || "Mostre aqui um resultado real ou um print de mensagem (com autorização)." },
-    { role: "Convite", text: cta },
-  ].map((f) => ({ ...f, text: applyVoice(f.text, ctx.business) }));
-  return getStore().insert("stories", user.id, { goal, frames });
+  return store.insert("stories", user.id, await genStories(ctx, { goal, format: b.format, count: b.count }));
 });

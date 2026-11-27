@@ -1,6 +1,6 @@
 import { route, loadCtx, bad } from "@/lib/api";
 import { getStore } from "@/lib/store";
-import { genPersonaDoc } from "@/lib/ai";
+import { genPersonaDoc, llmJson } from "@/lib/ai";
 
 export const POST = route(async (user, req) => {
   const b = await req.json();
@@ -11,7 +11,13 @@ export const POST = route(async (user, req) => {
   const cur = (await store.list("persona", user.id))[0];
   const filled = ["cliente", "dor", "desejo", "objecao", "decisao"].filter((k) => (answers[k] ?? "").trim().length > 8).length;
   const tunedPct = Math.round((filled / 5) * 100);
-  const document = genPersonaDoc(answers, ctx.business);
-  const data = { answers, document, source: "app", tunedPct };
+  const base = genPersonaDoc(answers, ctx.business);
+  const ai = await llmJson<{ document: string }>(
+    "Você escreve documentos de persona em português do Brasil, em Markdown. Responda SOMENTE um objeto JSON {document}. Não invente dados que não foram informados.",
+    `Reescreva e aprofunde este documento, mantendo as seções:\n${base}`,
+    user.id,
+  );
+  const fromAi = typeof ai?.document === "string" && ai.document.length > 400;
+  const data = { answers, document: fromAi ? ai!.document : base, source: "app", generator: fromAi ? "ia" : "modelo", tunedPct };
   return cur ? store.update("persona", cur.id, user.id, data) : store.insert("persona", user.id, data);
 });

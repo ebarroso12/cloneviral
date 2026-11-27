@@ -32,23 +32,22 @@ Não cole a chave secreta em conversas nem a envie para o GitHub.
 - Entre como dono, abra **Conexões** e grave o ID do app, a chave secreta e, se houver, o ID da configuração no quadro **Seu app da Meta**. Não precisa mexer na Vercel.
 - Para os anúncios, depois de conectar o Instagram use **Autorizar leitura de anúncios** (permissão `ads_read`; com o Login para Empresas, inclua-a na configuração) e então **Conectar anúncios**.
 
-## 2. IA para os textos (opcional, plano gratuito)
+## 2. IA (texto, vídeo e imagem)
 
-1. Em aistudio.google.com, crie uma chave de API em um projeto **sem faturamento ativado**.
-2. Acrescente em `.env.local`:
+No app, abra **IA e integrações**. Em cada quadro escolha o provedor, cole a chave, toque em **Salvar** e depois em **Testar**. Sem IA o app continua funcionando com os modelos próprios.
 
-```
-GEMINI_API_KEY=cole-aqui
-```
+| para | sem custo | pegar a chave |
+| --- | --- | --- |
+| texto | Gemini, plano gratuito (`gemini-3.8-flash`) | https://aistudio.google.com/apikey |
+| vídeo | Gemini, plano gratuito (`gemini-3.5-flash-lite`), a mesma chave | https://aistudio.google.com/apikey |
+| imagem | Cloudflare Workers AI (FLUX): ID da conta e token | https://dash.cloudflare.com/profile/api-tokens |
+| texto, reserva | Groq, plano gratuito | https://console.groq.com/keys |
 
-3. Feche e abra o app. Roteiros mostram a etiqueta **IA** ou **modelo**.
+Pagas, só se você marcar a autorização de cobrança (valem só para a conta do dono): Claude (`claude-opus-5-5` ou `claude-sonnet-5-5`), OpenAI (`gpt-6.2-sol`; imagem `gpt-image-2.5-sunburst`), Gemini 4 (`gemini-4-carbon`, preço dobra em 01/12/2026) e Nano Banana 2.1 para imagem.
 
-- Para continuar sem custo, **não ative cobrança** nesse projeto.
-- O plano gratuito tem limite diário, que varia; quando acaba, o app usa o modelo local.
-- O Google pode usar o que for enviado no plano gratuito. **Não escreva dados de pacientes ou clientes** na persona, no negócio ou nos temas.
-- O nome do modelo padrão (`gemini-flash-lite-latest`) não foi testado com chave. Se só aparecer "modelo", defina `GEMINI_MODEL` com um nome listado no AI Studio.
-
-A API paga da Anthropic fica desligada mesmo que exista uma chave no computador.
+- Modelos e formatos conferidos nas páginas oficiais em 27/11/2026; **nenhum foi testado com chave real**. Use o botão **Testar**.
+- Gemini: crie a chave em um projeto **sem faturamento ativado**, ou o uso passa a ser cobrado.
+- No plano gratuito o provedor pode usar o que for enviado. **Não envie dados nem vídeos de pacientes ou clientes.**
 
 ## 3. Publicar Reels sozinho
 

@@ -6,7 +6,7 @@ import { Modal, PageHead, useToast } from "@/components/ui";
 import { slideSvg, svgToPng, type Look } from "@/lib/slide";
 
 const LANGS = [["pt-BR", "Português"], ["en", "English"], ["es", "Español"]];
-export default function CarrosselView({ list, kit, patterns, models, cats, handle }: any) {
+export default function CarrosselView({ list, kit, patterns, models, cats, handle, imageAi, textAi }: any) {
   const r = useRouter();
   const { toast, node } = useToast();
   const [theme, setTheme] = useState("");
@@ -20,13 +20,22 @@ export default function CarrosselView({ list, kit, patterns, models, cats, handl
   const pickPhoto = async (file: File) => {
     try {
       if (!/^image\/(png|jpeg)$/.test(file.type)) throw new Error("Use uma foto PNG ou JPEG.");
+      await fit(file);
+    } catch (e: any) { toast(e.message || "Não consegui ler essa foto.", "err"); }
+  };
+  const fit = async (file: Blob) => {
       const img = await createImageBitmap(file);
       const cv = document.createElement("canvas");
       cv.width = 1080; cv.height = 1440;
       const k = Math.max(cv.width / img.width, cv.height / img.height);
       cv.getContext("2d")!.drawImage(img, (cv.width - img.width * k) / 2, (cv.height - img.height * k) / 2, img.width * k, img.height * k);
       setPhoto(cv.toDataURL("image/jpeg", 0.82));
-    } catch (e: any) { toast(e.message || "Não consegui ler essa foto.", "err"); }
+  };
+  const [prompt, setPrompt] = useState("");
+  const [drawing, setDrawing] = useState(false);
+  const draw = async () => {
+    setDrawing(true);
+    try { const j = await api("/api/ai/image", { body: { prompt: prompt.trim() || theme } }); await fit(await (await fetch(j.image)).blob()); toast("Imagem criada."); } catch (e: any) { toast(e.message, "err"); } finally { setDrawing(false); }
   };
   const [picker, setPicker] = useState(false);
   const [cat, setCat] = useState(cats[0].name);
@@ -41,7 +50,7 @@ export default function CarrosselView({ list, kit, patterns, models, cats, handl
   };
   const go = async () => {
     setBusy(true);
-    try { const c = await api("/api/ai/carousel", { body: { theme, modelId: modelId || undefined, patternId: patternId || undefined, language: lang, imageMode: imgMode, coverImage: imgMode === "photo" ? photo : undefined } }); if (!useBrand && c.brandApplied) await api(`/api/c/carousels?id=${c.id}`, { method: "PATCH", body: { brandApplied: false } }); setOpenId(c.id); toast("Carrossel criado."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); }
+    try { const c = await api("/api/ai/carousel", { body: { theme, modelId: modelId || undefined, patternId: patternId || undefined, language: lang, imageMode: imgMode, coverImage: imgMode !== "color" ? photo : undefined } }); if (!useBrand && c.brandApplied) await api(`/api/c/carousels?id=${c.id}`, { method: "PATCH", body: { brandApplied: false } }); setOpenId(c.id); toast("Carrossel criado."); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); }
   };
   const edit = async (c: any, i: number, f: "title" | "text", v: string) => { const slides = c.slides.map((s: any, j: number) => (j === i ? { ...s, [f]: v } : s)); await api(`/api/c/carousels?id=${c.id}`, { method: "PATCH", body: { slides, approved: false } }); r.refresh(); };
   const approve = async (c: any) => { await api(`/api/c/carousels?id=${c.id}`, { method: "PATCH", body: { approved: !c.approved } }); r.refresh(); };
@@ -60,10 +69,14 @@ export default function CarrosselView({ list, kit, patterns, models, cats, handl
         </div>
         <div className="row wrap" style={{ marginBottom: 12 }}>
           <label className="row small"><input type="checkbox" style={{ width: "auto" }} checked={useBrand} disabled={!kit?.applied} onChange={(e) => setUseBrand(e.target.checked)} /> Usar minha identidade visual {!kit?.applied && <a href="/identidade-visual">(configurar)</a>}</label>
-          <div className="chips">{[["color", "Fundo de cor"], ["photo", "Com foto na capa"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={imgMode === k} onClick={() => setImgMode(k)}>{v}</button>)}</div>
+          <div className="chips">{[["color", "Fundo de cor"], ["photo", "Com foto na capa"], ["ai", "Imagem por IA"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={imgMode === k} onClick={() => { setImgMode(k); setPhoto(""); }}>{v}</button>)}</div>
         </div>
         {imgMode === "photo" && <div className="field"><label htmlFor="foto">Foto da capa (PNG ou JPEG)</label><input id="foto" type="file" accept="image/png,image/jpeg" onChange={(e) => e.target.files?.[0] && pickPhoto(e.target.files[0])} />{photo && <span className="tiny muted">Foto pronta.</span>}</div>}
-        <button className="btn primary" onClick={go} disabled={busy || !theme.trim() || (imgMode === "photo" && !photo)}>{busy ? "Criando..." : "Criar carrossel"}</button>
+        {imgMode === "ai" && (imageAi
+          ? <div className="field"><label htmlFor="ip">Descreva a imagem da capa (vazio usa o tema)</label><input id="ip" value={prompt} onChange={(e) => setPrompt(e.target.value)} /><button type="button" className="btn" disabled={drawing || !(prompt.trim() || theme.trim())} onClick={draw}>{drawing ? "Criando imagem..." : photo ? "Gerar outra imagem" : "Gerar imagem"}</button>{photo && <img src={photo} alt="Capa gerada" style={{ maxWidth: 180, borderRadius: 10 }} />}</div>
+          : <p className="small muted">Nenhuma IA de imagem ligada. <a href="/ia">Configurar</a></p>)}
+        {lang !== "pt-BR" && !textAi && <p className="small muted">Para escrever em outro idioma, <a href="/ia">ligue uma IA de texto</a>.</p>}
+        <button className="btn primary" onClick={go} disabled={busy || !theme.trim() || (imgMode !== "color" && !photo)}>{busy ? "Criando..." : "Criar carrossel"}</button>
       </div>
       <h2 style={{ margin: "22px 0 10px" }}>Seus carrosséis</h2>
       {list.length === 0 && <div className="empty">Nenhum carrossel criado.</div>}

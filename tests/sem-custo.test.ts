@@ -116,7 +116,7 @@ test("Reels: falha fica registrada e não é repetida sozinha", async () => {
 });
 
 test("BUG-022: chave paga no ambiente não gera cobrança sem autorização expressa", async () => {
-  const { aiProvider } = await import("../lib/ai");
+  const { aiProvider } = await import("../lib/providers");
   assert.equal(aiProvider({ ANTHROPIC_API_KEY: "k" }), null);
   assert.equal(aiProvider({ ANTHROPIC_API_KEY: "k", RV_ALLOW_PAID_AI: "1" }), "anthropic");
   assert.equal(aiProvider({ GEMINI_API_KEY: "g", ANTHROPIC_API_KEY: "k" }), "gemini");
@@ -127,7 +127,7 @@ test("IA gratuita (Gemini): usa quando há chave e cai no modelo local quando fa
   const { llmJson } = await import("../lib/ai");
   process.env.GEMINI_API_KEY = "g";
   try {
-    const ok = await withFetch(() => ({ body: { candidates: [{ content: { parts: [{ text: '```json\n[{"a":1}]\n```' }] } }] } }), async (calls) => {
+    const ok = await withFetch(() => ({ body: { steps: [{ type: "thought", content: [{ type: "text", text: "[0]" }] }, { type: "model_output", content: [{ type: "text", text: '```json\n[{"a":1}]\n```' }] }] } }), async (calls) => {
       const r = await llmJson<{ a: number }[]>("s", "u");
       assert.equal(calls[0].url.hostname, "generativelanguage.googleapis.com");
       assert.equal(calls[0].headers["x-goog-api-key"], "g");
@@ -215,7 +215,7 @@ test("Cada texto diz se veio da IA ou do modelo local", async () => {
   assert.equal(local.generator, "modelo");
   process.env.GEMINI_API_KEY = "g";
   try {
-    const [ia] = await withFetch(() => ({ body: { candidates: [{ content: { parts: [{ text: '[{"title":"t","hook":"h","body":"b","cta":"c","seconds":20}]' }] } }] } }), () => genScripts(ctx, { type: "viral", dest: "reel", n: 1 }));
+    const [ia] = await withFetch(() => ({ body: { steps: [{ type: "model_output", content: [{ type: "text", text: '[{"title":"t","hook":"h","body":"b","cta":"c","seconds":20}]' }] }] } }), () => genScripts(ctx, { type: "viral", dest: "reel", n: 1 }));
     assert.equal(ia.generator, "ia");
   } finally {
     delete process.env.GEMINI_API_KEY;

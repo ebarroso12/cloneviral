@@ -35,7 +35,8 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 - **API**: handlers usam `route()` de `lib/api.ts` (autentica e converte `HttpError` em 401/4xx). CRUD simples passa por `app/api/c/[collection]`, que só aceita as listas `WRITABLE` e `READONLY`: coleção nova precisa entrar nelas.
 - **Cliente** chama a API com `api()` de `lib/client.ts`.
 - **Sem limite de uso**: o dono pediu em 27/11/2026 para tirar teste de 30 dias, créditos e plano (o app é só para ele). Não recriar.
-- **Conteúdo** (`lib/ai.ts`): geradores por modelo, determinísticos e sem custo. Com `GEMINI_API_KEY` (plano gratuito), `llmJson` tenta a IA e cai no modelo local se falhar; roteiros guardam `generator` (`ia` ou `modelo`).
+- **Conteúdo** (`lib/ai.ts`): geradores por modelo, determinísticos e sem custo. Com uma IA ligada, `llmJson(system, user, userId)` tenta a IA e cai no modelo local se falhar; roteiros guardam `generator` (`ia` ou `modelo`). Passe `userId`, ou o provedor pago do dono não é usado.
+- **Provedores de IA** (`lib/providers.ts`): catálogo de texto, vídeo e imagem, gravado pelo dono na tela `/ia` (chave cifrada); `getAi(tipo, userId)` decide. Sem nada gravado vale a variável de ambiente. Provedor novo entra no catálogo e, se o formato for outro, em `askText`, `askImage` ou `askVideo`.
 - **Agendador** (`instrumentation.ts` + `lib/scheduler.ts`): só com `RV_SCHEDULER=1` (o atalho local liga); publica o vencido a cada minuto e coleta os números uma vez por dia.
 - **Métricas** (`lib/metrics.ts`): funções puras sobre posts, snapshots e audiência. `tests/metrics.test.ts` fixa os números observados na tela original; mudança de fórmula tem de ser conferida com `replica/recon.md`. O terceiro sinal da autenticidade (comentários por curtida) é hipótese não confirmada.
 - **Instagram** (`lib/instagram.ts`): OAuth do Facebook Login + Graph API, token em AES-256-GCM com chave derivada de `RV_SECRET` (obrigatória em produção). `syncAccount` tem prazo e devolve `partial`; `syncAll` serve `/api/cron/sync`. Os testes simulam o `fetch`.
@@ -43,7 +44,8 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 
 ## Regras que o código já garante (não desfazer)
 
-- Regra do dono: **nenhum gasto**. Não ligar serviço pago; `aiProvider` só usa a Anthropic com `RV_ALLOW_PAID_AI=1`.
+- Regra do dono: **nenhum gasto** sem ele escolher. Provedor pago exige a autorização marcada na tela `/ia` e roda só para o dono; no ambiente, a Anthropic exige `RV_ALLOW_PAID_AI=1`. No gratuito só entram modelos da lista.
+- Número de perfil de terceiro (`lib/discovery.ts`) só aparece se a Meta devolveu; sugestão da IA não confirmada é descartada.
 - Agendamento só nasce em `schedulePost` (`/api/schedule`); `scheduled_posts` na API genérica é leitura e exclusão.
 - Conta do Instagram só é gravada por `saveConnection` (não mistura contas; troca pede confirmação e guarda cópia).
 - Resultado de publicação incerto vira `conferir`, nunca `falhou`. Dia sem medição de seguidores não recebe número.
@@ -62,7 +64,7 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 
 ## Limitações abertas
 
-Instagram (conexão, coleta, publicação) e Gemini nunca testados contra o serviço real. Publicado na Vercel com Supabase real (ver `replica/deploy.md`). No site, o vídeo vai em pedaços para o banco (`lib/videos.ts`) e a publicação é chamada pelo GitHub Actions.
+Instagram (conexão, coleta, publicação, perfis de referência) e os provedores de IA nunca testados contra o serviço real. Publicado na Vercel com Supabase real (ver `replica/deploy.md`). No site, o vídeo vai em pedaços para o banco (`lib/videos.ts`) e a publicação é chamada pelo GitHub Actions.
 
 ## Pipeline replica e regras do projeto
 

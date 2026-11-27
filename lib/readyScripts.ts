@@ -1,0 +1,41 @@
+// 32 roteiros prontos escritos para o Radar Viral (texto próprio). Os trechos entre colchetes são para completar.
+import type { ScriptType } from "./ai";
+
+export type Ready = { n: number; type: ScriptType; seconds: number; title: string; hook: string; body: string };
+
+const list: [ScriptType, number, string, string, string][] = [
+  ["viral", 20, "O conselho que atrapalha", "Pare de seguir este conselho sobre [seu assunto].", "Todo mundo repete: [conselho comum]. Só que isso funciona para pouca gente. O que costuma dar mais certo é [sua alternativa], porque [motivo em uma frase]. Teste por sete dias e me diga o que mudou."],
+  ["viral", 15, "Três sinais", "3 sinais de que [problema] já está custando caro.", "Um: [sinal no começo do dia]. Dois: [sinal no trabalho ou em casa]. Três: [sinal que quase ninguém liga ao problema]. Se marcou dois, vale olhar com calma."],
+  ["viral", 20, "Mito ou verdade", "Mito ou verdade: [frase que todo mundo repete]?", "Resposta curta: [mito ou verdade]. O que existe de certo aí é [parte verdadeira]. O erro é achar que [exagero comum]. Na prática, faça [orientação simples]."],
+  ["viral", 15, "Antes de gastar", "Antes de gastar mais um real com [solução comum], veja isto.", "Faça três perguntas: você já [passo básico]? Sabe medir [resultado]? Consegue manter por um mês? Se alguma resposta for não, comece por ela."],
+  ["viral", 20, "O que eu não faria", "Trabalho com [área] e isto eu não faria.", "Primeiro: [prática que você evita]. Segundo: [atalho que parece bom]. Terceiro: [promessa fácil]. No lugar disso eu faço [sua prática], mais lenta e mais segura."],
+  ["viral", 25, "A conta que ninguém faz", "Ninguém faz esta conta sobre [assunto].", "Pegue [quantidade diária] e multiplique por 30. Agora compare com [referência que a pessoa entende]. Não é para assustar: é para decidir com o número na frente."],
+  ["viral", 15, "Escolha um lado", "[Opção A] ou [opção B]? Eu escolho sem pensar.", "Eu fico com [escolha], por um motivo: [motivo]. A outra serve quando [exceção honesta]. E você, de que lado está?"],
+  ["viral", 20, "O erro de segunda-feira", "O erro que começa toda segunda-feira.", "Você promete [meta grande], aguenta até quarta e desiste. Troque por [versão pequena]. Parece pouco, e é exatamente por isso que você repete."],
+  ["viral", 15, "Em uma frase", "Se eu tivesse uma frase para explicar [assunto], seria esta.", "[Sua frase]. Agora o exemplo: [situação comum]. Percebeu a diferença? Guarde para lembrar na próxima vez."],
+  ["viral", 20, "Pergunta proibida", "A pergunta que as pessoas têm vergonha de fazer sobre [assunto].", "É esta: [pergunta]. E a resposta é mais simples do que parece: [resposta]. Se você também queria saber, mande para alguém que precisa ouvir."],
+  ["viral", 20, "Parece, mas não é", "Parece [coisa boa], mas é [armadilha].", "O jeito de reconhecer: [sinal um] e [sinal dois]. Quando aparecer, faça [ação]. Leva poucos minutos e evita retrabalho."],
+  ["emocional", 40, "O dia em que quase desisti", "Teve um dia em que eu quase desisti de [trabalho ou projeto].", "Era [momento]. Eu pensei: [pensamento]. O que me segurou foi [detalhe concreto]. Não virou sucesso da noite para o dia. Mas aprendi que [lição]. Se hoje é o seu dia difícil, dê só o próximo passo."],
+  ["emocional", 35, "Para quem segura tudo", "Isto é para você que segura tudo e não conta para ninguém.", "Você resolve a casa, o trabalho e os outros. E quando sobra um minuto, vem a culpa. Pedir ajuda não é fraqueza. Comece escolhendo uma única coisa para dividir nesta semana."],
+  ["emocional", 40, "A frase que mudou", "Uma frase de [cliente ou pessoa] mudou o meu jeito de trabalhar.", "A frase foi: [frase, com autorização e sem identificar]. Eu estava focado em [erro seu]. Desde então eu faço [mudança]. Às vezes quem atendemos ensina mais que o curso."],
+  ["emocional", 30, "Você não está atrasada", "Você não está atrasada.", "A comparação mostra o palco dos outros e o seu bastidor. Olhe para a pessoa que você era há um ano. O que ela não sabia e você já sabe? Isso é avanço."],
+  ["emocional", 40, "Por que eu comecei", "Eu comecei em [área] por um motivo que quase não conto.", "Quando [situação de origem], eu percebi que [percepção]. Ninguém explicava de um jeito que desse para entender. Hoje é isso que eu tento fazer, todo dia, com cada pessoa."],
+  ["emocional", 35, "O medo de aparecer", "O medo de gravar não some. Ele diminui.", "Meu primeiro vídeo teve [problema real]. Eu publiquei mesmo assim. O décimo foi menos travado. Se você espera ficar pronto para aparecer, vai esperar muito. Grave trinta segundos hoje."],
+  ["emocional", 30, "Pequena vitória", "Comemore isto antes que passe batido.", "Você fez [pequena ação] mesmo sem vontade. Ninguém aplaudiu. Mas é assim que [desejo] começa. Escreva nos comentários qual foi a sua desta semana."],
+  ["emocional", 40, "Carta para o começo", "Se eu pudesse falar com quem eu era no começo.", "Eu diria três coisas. Cobre o que o seu trabalho vale. Descanse antes de quebrar. E não confunda barulho com resultado. Qual delas você precisava ouvir hoje?"],
+  ["emocional", 35, "Quando dá errado", "Nem tudo dá certo, e eu vou mostrar um caso meu.", "Eu tentei [iniciativa] e o resultado foi [resultado real]. Doeu. O que faltou foi [causa]. Mostrar isso importa porque ninguém aprende só com vitória."],
+  ["emocional", 30, "Permissão", "Hoje você tem permissão para fazer o básico.", "Não precisa ser perfeito, nem grande, nem bonito. Precisa existir. Escolha o mínimo de [assunto], faça e encerre o dia em paz."],
+  ["tecnico", 60, "Passo a passo", "Como fazer [tarefa] em três passos.", "Passo 1: [preparação], porque sem isso o resto falha. Passo 2: [execução], com atenção em [detalhe]. Passo 3: [conferência]: você sabe que deu certo quando [sinal]. Salve para fazer junto."],
+  ["tecnico", 60, "Lista de conferência", "Confira estes pontos antes de [ação].", "Ponto 1: [item]. Ponto 2: [item]. Ponto 3: [item]. Ponto 4: [item]. Faltou algum? Resolva antes de seguir. Salve esta lista."],
+  ["tecnico", 75, "Comece do zero", "Se eu fosse começar [assunto] do zero hoje.", "Na primeira semana eu faria só [fundamento]. Na segunda, [próxima habilidade]. Na terceira, começaria a medir [indicador]. Só depois eu pensaria em [parte avançada]."],
+  ["tecnico", 60, "Erro e correção", "Este erro em [tarefa] tem correção simples.", "O erro: [o que a pessoa faz]. Por que acontece: [causa]. Como corrigir: [passos]. Como evitar de novo: [hábito]."],
+  ["tecnico", 90, "Meu método", "O método que eu uso para [resultado], etapa por etapa.", "São [número] etapas. [Etapa 1]: o objetivo é [objetivo]. [Etapa 2]: aqui a decisão é [decisão]. [Etapa 3]: o que eu acompanho é [medida]. Comente a etapa em que você trava."],
+  ["tecnico", 60, "Compare antes de escolher", "Como escolher entre [opção A] e [opção B].", "Olhe três critérios: custo, tempo e [critério do seu nicho]. A opção A ganha quando [situação]. A B ganha quando [situação]. Na dúvida, teste a mais fácil de desfazer."],
+  ["tecnico", 45, "Termo explicado", "[Termo técnico] explicado sem complicar.", "Pense em [comparação do dia a dia]. É isso: [definição simples]. Importa porque [consequência]. Um exemplo: [caso]."],
+  ["tecnico", 75, "Rotina que sustenta", "A rotina de [duração] que sustenta [resultado].", "De manhã: [ação]. No meio do dia: [ação]. No fim: [registro]. O segredo não é a intensidade, é anotar para ajustar na semana seguinte."],
+  ["tecnico", 60, "Como medir", "Como saber se [assunto] está funcionando.", "Escolha um número: [indicador]. Anote o ponto de partida hoje. Meça toda semana no mesmo dia. Se não mudar em quatro semanas, troque uma coisa por vez, nunca todas."],
+  ["tecnico", 60, "Perguntas frequentes", "As três perguntas que mais me fazem sobre [assunto].", "Primeira: [pergunta]. [Resposta curta]. Segunda: [pergunta]. [Resposta curta]. Terceira: [pergunta]. [Resposta curta]. Faltou a sua? Escreva aqui."],
+  ["viral", 20, "Resumo do ano", "Se você só lembrar de uma coisa sobre [assunto], que seja esta.", "[Regra principal]. Parece óbvio até você ver quantas vezes quebra na prática. Nesta semana, repare em [situação] e me conte o que viu."],
+];
+
+export const READY: Ready[] = list.map(([type, seconds, title, hook, body], i) => ({ n: i + 1, type, seconds, title, hook, body }));

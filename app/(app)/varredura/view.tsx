@@ -7,17 +7,17 @@ import { ScriptCard } from "@/components/ScriptCard";
 import { fmtDateTimePt } from "@/lib/format";
 
 const cost = (n: number) => 2 + Math.ceil(n * 1.2);
-export default function VarreduraView({ sweeps, scripts, patterns }: any) {
+export default function VarreduraView({ sweeps, scripts, patterns, initialSample }: any) {
   const r = useRouter();
   const { toast, node } = useToast();
-  const [target, setTarget] = useState("perfil");
+  const [target, setTarget] = useState(initialSample ? "um-perfil" : "perfil");
   const [dest, setDest] = useState("reel");
   const [types, setTypes] = useState<string[]>(["viral", "tecnico"]);
   const [analyze, setAnalyze] = useState(5);
   const [n, setN] = useState(5);
   const [dur, setDur] = useState("variado");
   const [theme, setTheme] = useState("");
-  const [sample, setSample] = useState("");
+  const [sample, setSample] = useState<string>(initialSample ?? "");
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<string | null>(sweeps[0]?.id ?? null);
   const tog = (t: string) => setTypes(types.includes(t) ? types.filter((x) => x !== t) : [...types, t]);
@@ -29,7 +29,7 @@ export default function VarreduraView({ sweeps, scripts, patterns }: any) {
     <>
       <PageHead title="Varredura" desc="O app estuda os posts que mais funcionaram, acha o padrão do gancho e do formato, e escreve roteiros novos em cima dele." />
       <div className="card">
-        <div className="field"><label>O que varrer</label><div className="chips">{[["perfil", "Meu perfil"], ["um-perfil", "Um perfil"], ["nicho", "Um nicho"], ["conteudo", "Um conteúdo"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={target === k} onClick={() => setTarget(k)}>{v}</button>)}</div>{target !== "perfil" && <span className="muted tiny">A API oficial do Instagram não entrega conteúdo de terceiros. Cole abaixo o que você quer estudar; eu extraio só a estrutura e escrevo sobre o seu assunto.</span>}</div>
+        <div className="field"><label>O que varrer</label><div className="chips">{[["perfil", "Meu perfil"], ["um-perfil", "Um perfil"], ["nicho", "Um nicho"], ["conteudo", "Um conteúdo"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={target === k} onClick={() => setTarget(k)}>{v}</button>)}</div>{target !== "perfil" && <span className="muted tiny">Escolha uma conta em <a href="/perfis">Perfis de referência</a> ou cole abaixo o que você quer estudar. Eu extraio só a estrutura e escrevo sobre o seu assunto.</span>}</div>
         {target !== "perfil" && <div className="field"><label htmlFor="sample">Legendas ou roteiros para estudar (uma linha em branco entre cada um)</label><textarea id="sample" style={{ minHeight: 140 }} value={sample} onChange={(e) => setSample(e.target.value)} /></div>}
         <div className="grid g2">
           <div className="field"><label>Destino</label><div className="chips">{[["reel", "Reel"], ["criativo", "Criativo"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={dest === k} onClick={() => setDest(k)}>{v}</button>)}</div></div>

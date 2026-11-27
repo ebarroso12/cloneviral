@@ -21,7 +21,7 @@ os.makedirs(SHOTS, exist_ok=True)
 ROTAS = ["metricas", "conexoes", "persona", "meu-negocio", "identidade-visual", "varredura", "noticias", "ideias",
          "roteiro", "carrossel", "serie", "isca", "planejador-editorial", "meu-perfil-pronto", "clube",
          "clube/sala-de-analise", "clube/raio-x", "clube/stories",
-         "clube/roteiros", "conta"]
+         "clube/roteiros", "clube/prontos", "perfis", "ia", "conta"]
 
 resultados = []
 problemas = []
@@ -571,6 +571,52 @@ def olho(browser):
     conferir('[aria-label="Sua senha para excluir"]')
 
 
+@caso("NOVO roteiro pronto, stories por formato, perfis e opções de IA")
+def novidades(browser):
+    p = browser.new_context(locale="pt-BR", viewport={"width": 390, "height": 800}).new_page()
+    vigiar(p)
+    assert api(p, "POST", "/api/auth/login", {"email": "dono@exemplo.test", "password": "senha-de-teste-123"})[0] == 200
+    ir(p, "clube/prontos")
+    assert p.locator("details.card").count() == 32
+    p.locator("details.card summary").first.click()
+    p.get_by_role("button", name="Usar este roteiro").first.click()
+    p.get_by_text("Copiado para os seus roteiros.").wait_for()
+    assert any(s["title"] == "O conselho que atrapalha" for s in api(p, "GET", "/api/c/scripts")[1])
+    ir(p, "clube/stories")
+    p.locator("#g").fill("tirar dúvidas")
+    p.locator("#fm").select_option("enquete")
+    p.locator("#qt").select_option("3")
+    p.get_by_role("button", name="Criar sequência").click()
+    p.get_by_text("Sequência criada.").wait_for()
+    assert len(api(p, "GET", "/api/c/stories")[1][0]["frames"]) == 3
+    ir(p, "perfis")
+    assert p.get_by_role("button", name="Adicionar perfil").is_disabled()
+    ir(p, "carrossel")
+    p.get_by_role("button", name="Imagem por IA").click()
+    p.get_by_text("Nenhuma IA de imagem ligada.").wait_for()
+    p.locator("#l").select_option("en")
+    p.locator("#t").fill("sleep")
+    p.get_by_role("button", name="Fundo de cor").click()
+    p.get_by_role("button", name="Criar carrossel").click()
+    p.get_by_text(re.compile("Para escrever em outro idioma ligue uma IA")).wait_for()
+    ir(p, "ia")
+    caixa = p.get_by_role("region", name="Texto")
+    caixa.locator("#text-p").select_option("openai")
+    caixa.locator("#text-k").fill("chave-de-teste-0123456789")
+    caixa.get_by_role("button", name="Salvar").click()
+    p.get_by_text(re.compile("Marque a autorização de cobrança")).wait_for()
+    caixa.locator("#text-p").select_option("gemini-gratis")
+    caixa.locator("#text-k").fill("chave-de-teste-0123456789")
+    caixa.get_by_role("button", name="Salvar").click()
+    p.get_by_text("IA gravada.").wait_for()
+    p.get_by_role("region", name="Texto").get_by_text(re.compile("^Ligado: Gemini")).wait_for()
+    assert "chave-de-teste-0123456789" not in p.content()
+    assert p.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "rolagem lateral no celular"
+    caixa.locator("#text-p").select_option("")
+    caixa.get_by_role("button", name="Salvar").click()
+    p.get_by_text("IA desligada.").wait_for()
+
+
 @caso("SEG-3 senha errada em série bloqueia")
 def forca_bruta(browser):
     p = browser.new_context().new_page()
@@ -599,6 +645,7 @@ with sync_playwright() as pw:
     legais(nav)
     convite(nav)
     olho(nav)
+    novidades(nav)
     excluir(nav)
     sair(pagina)
     forca_bruta(nav)

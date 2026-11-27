@@ -1,7 +1,10 @@
-// Geradores de conteúdo. Modo padrão: por regras e modelos (sem custo, determinístico).
-// Se ANTHROPIC_API_KEY estiver definida, roteiros e carrosséis passam por um modelo de linguagem (chamada paga, opt-in).
+// Geradores de conteúdo. Sem IA ligada: por regras e modelos (sem custo, determinístico).
+// Com um provedor ligado (lib/providers.ts), o texto vem da IA e o modelo local é a reserva.
 import type { Post } from "./metrics";
 import type { CarouselModel } from "./templates";
+import { getAi, askText, readJson } from "./providers";
+import { getStore } from "./store";
+import { HttpError } from "./auth";
 
 export type Persona = { answers: Record<string, string>; document?: string };
 export type Business = {
@@ -13,7 +16,7 @@ export type Business = {
   focus: string;
   voice: { style: string; reference: string; never: string; always: string; cta: string };
 };
-export type Ctx = { persona: Persona; business: Business };
+export type Ctx = { persona: Persona; business: Business; userId?: string };
 
 export type ScriptType = "viral" | "emocional" | "tecnico";
 export type ScriptOut = { generator?: "ia" | "modelo"; type: ScriptType; dest: "reel" | "criativo"; seconds: number; title: string; hook: string; body: string; cta: string };
@@ -30,51 +33,25 @@ export function applyVoice(text: string, b?: Business) {
 }
 const lc = (s?: string) => (s ?? "").replace(/[.\s]+$/, "");
 
-type Env = Record<string, string | undefined>;
-/**
- * Qual IA usar. Regra do dono: nada que cobre. Gemini no plano gratuito vale quando há chave;
- * a API da Anthropic é paga por uso e só liga com RV_ALLOW_PAID_AI=1, mesmo que a chave esteja no ambiente.
- */
-export function aiProvider(env: Env = process.env): "gemini" | "anthropic" | null {
-  if (env.GEMINI_API_KEY) return "gemini";
-  if (env.ANTHROPIC_API_KEY && env.RV_ALLOW_PAID_AI === "1") return "anthropic";
-  return null;
-}
-
-export async function llmJson<T>(system: string, user: string): Promise<T | null> {
-  const provider = aiProvider();
-  if (!provider) return null;
+export async function llmJson<T>(system: string, user: string, userId?: string): Promise<T | null> {
   try {
-    let text = "";
-    if (provider === "gemini") {
-      const model = process.env.GEMINI_MODEL || "gemini-flash-lite-latest";
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: "POST",
-        headers: { "x-goog-api-key": process.env.GEMINI_API_KEY!, "content-type": "application/json" },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }], generationConfig: { responseMimeType: "application/json" } }),
-        signal: AbortSignal.timeout(60000),
-      });
-      if (!res.ok) { console.error(`IA gratuita respondeu ${res.status}; usei o modelo local.`); return null; }
-      const j = await res.json();
-      text = (j.candidates?.[0]?.content?.parts ?? []).map((x: any) => x.text ?? "").join("");
-    } else {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "x-api-key": process.env.ANTHROPIC_API_KEY!, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-        body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5", max_tokens: 4000, system, messages: [{ role: "user", content: user }] }),
-        signal: AbortSignal.timeout(60000),
-      });
-      if (!res.ok) return null;
-      text = (await res.json()).content?.[0]?.text ?? "";
-    }
-    const m = text.match(/[\[{][\s\S]*[\]}]/);
-    return m ? (JSON.parse(m[0]) as T) : null;
-  } catch {
+    const cfg = await getAi("text", userId);
+    return cfg ? readJson<T>(await askText(cfg, system, user)) : null;
+  } catch (e: any) {
+    console.error(`${String(e?.message ?? e).slice(0, 200)} Usei o modelo local.`);
     return null;
   }
 }
 
-function voiceBrief(c: Ctx) {
+/** Resumo do negócio e da persona da conta, para pedidos fora dos geradores. */
+export async function loadVoice(userId: string) {
+  const s = getStore();
+  const business = ((await s.list("business", userId))[0] as any) ?? { voice: {} };
+  const persona = ((await s.list("persona", userId))[0] as any) ?? { answers: {} };
+  return voiceBrief({ business: { ...business, voice: business.voice ?? {} }, persona }) + ` Negócio: ${business.brand || business.name || ""}. Oferta: ${business.offerMain ?? ""}.`;
+}
+
+export function voiceBrief(c: Ctx) {
   const v = c.business.voice;
   return `Voz: ${v.style} Nunca usar: ${v.never}. Sempre usar: ${v.always}. CTA padrão: ${v.cta}. Cliente: ${c.persona.answers.cliente ?? ""}. Dor: ${c.persona.answers.dor ?? ""}. Desejo: ${c.persona.answers.desejo ?? ""}. Método: ${c.business.method}.`;
 }
@@ -84,6 +61,7 @@ export async function genScripts(c: Ctx, o: { type: ScriptType; dest: "reel" | "
   const llm = await llmJson<ScriptOut[]>(
     "Você escreve roteiros curtos de vídeo em português do Brasil. Responda SOMENTE um array JSON de objetos {type,dest,seconds,title,hook,body,cta}.",
     `${voiceBrief(c)}\nEscreva ${o.n} roteiros do tipo ${o.type} para ${o.dest}. Tema: ${o.theme || "variado, dentro do nicho"}. Padrões de estrutura: ${JSON.stringify(o.patterns ?? [])}.`,
+    c.userId,
   );
   if (llm && Array.isArray(llm) && llm.length) return llm.slice(0, o.n).map((s) => ({ ...s, generator: "ia" as const, type: o.type, dest: o.dest, hook: applyVoice(s.hook, c.business), body: applyVoice(s.body, c.business), cta: applyVoice(s.cta, c.business) }));
 
@@ -173,8 +151,10 @@ export async function genCarousel(c: Ctx, o: { theme: string; model?: CarouselMo
   const llm = await llmJson<Slide[]>(
     "Você escreve textos de carrossel de Instagram em português do Brasil. Responda SOMENTE um array JSON de {role,title,text}.",
     `${voiceBrief(c)}\nTema: ${o.theme}. Slides (papéis): ${roles.join(", ")}. Idioma do texto: ${o.language ?? "pt-BR"}.`,
+    c.userId,
   );
   if (llm && Array.isArray(llm) && llm.length === roles.length) return llm.map((s) => ({ ...s, title: applyVoice(s.title, c.business), text: applyVoice(s.text, c.business) }));
+  if (o.language && o.language !== "pt-BR") throw new HttpError(400, "Para escrever em outro idioma ligue uma IA em IA e integrações (ou confira se a chave está valendo).");
   const t = lc(o.theme);
   const dor = lc(c.persona.answers.dor || t).toLowerCase();
   const desejo = lc(c.persona.answers.desejo || "chegar lá").toLowerCase();
@@ -258,6 +238,13 @@ export async function genCarousel(c: Ctx, o: { theme: string; model?: CarouselMo
 // ---------- série, isca, persona ----------
 export async function genSeries(c: Ctx, o: { theme: string; chapters: number }) {
   const angles = ["O ponto de partida", "O que está travando", "O primeiro passo", "O erro mais comum", "O que muda quando você age", "Como manter o ritmo", "O próximo nível", "Perguntas que sempre aparecem", "Casos do dia a dia", "O fechamento"];
+  const ai = await llmJson<ScriptOut[]>(
+    "Você escreve séries de vídeos curtos em português do Brasil. Responda SOMENTE um array JSON de {type,seconds,title,hook,body,cta}, com type viral, emocional ou tecnico.",
+    `${voiceBrief(c)}\nSérie em ${o.chapters} capítulos sobre: ${o.theme}. Cada capítulo continua o anterior.`,
+    c.userId,
+  );
+  if (Array.isArray(ai) && ai.length === o.chapters && ai.every((s) => s?.hook && s?.body))
+    return ai.map((s, i): ScriptOut => ({ generator: "ia", dest: "reel", type: (["viral", "emocional", "tecnico"] as const).includes(s.type) ? s.type : "viral", seconds: Number(s.seconds) || 45, title: s.title || `Capítulo ${i + 1}`, hook: applyVoice(s.hook, c.business), body: applyVoice(s.body, c.business), cta: applyVoice(s.cta || c.business.voice?.cta || "", c.business) }));
   const scripts: ScriptOut[] = [];
   for (let i = 0; i < o.chapters; i++) {
     const type: ScriptType = i % 3 === 0 ? "viral" : i % 3 === 1 ? "emocional" : "tecnico";
@@ -271,6 +258,13 @@ export async function genSeries(c: Ctx, o: { theme: string; chapters: number }) 
 export async function genIsca(c: Ctx, o: { keyword: string; title?: string; source?: string }) {
   const steps = (c.business.method || "Clareza, Constância e Convite").split(/,| e /).map((x) => x.trim()).filter(Boolean);
   const title = o.title?.trim() || `Guia ${o.keyword.toUpperCase()}`;
+  const ai = await llmJson<{ title: string; sections: { h: string; p: string }[] }>(
+    "Você escreve materiais gratuitos curtos em português do Brasil. Responda SOMENTE um objeto JSON {title,sections:[{h,p}]}. Não invente números nem depoimentos.",
+    `${voiceBrief(c)}\nMaterial entregue a quem digita ${o.keyword}. Título desejado: ${title}. Base: ${clean(o.source ?? "").slice(0, 4000)}`,
+    c.userId,
+  );
+  if (ai?.sections?.length && ai.sections.every((s) => s?.h && s?.p))
+    return { title: o.title?.trim() || ai.title || title, sections: ai.sections.slice(0, 12).map((s) => ({ h: applyVoice(s.h, c.business), p: applyVoice(s.p, c.business) })) };
   const sections = [
     { h: "Por que este guia existe", p: `Você pediu ${o.keyword.toUpperCase()}. Este material mostra o primeiro passo para ${lc(c.persona.answers.desejo || "avançar").toLowerCase()}, sem enrolação.` },
     ...steps.map((s, i) => ({ h: `Passo ${i + 1}: ${cap(s)}`, p: `${cap(s)} é a base. Reserve 15 minutos hoje, escreva em uma frase o que você quer e escolha uma ação pequena para fazer ainda esta semana.${o.source ? " (Baseado no conteúdo: " + clean(o.source).slice(0, 120) + "...)" : ""}` })),

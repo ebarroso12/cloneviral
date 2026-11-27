@@ -36,3 +36,7 @@ Not shippable yet: 4 must-have features are not done.
 
 ## Yours, not in the original (not scored)
 - CopyCut
+
+## Atualização de 27/11/2026
+
+Entraram Perfis de referência, Assistente de Stories, 32 roteiros prontos próprios, análise de vídeo por IA, imagem de capa por IA e a tela de provedores. A situação linha a linha está em `features.csv`; os percentuais acima são anteriores.
