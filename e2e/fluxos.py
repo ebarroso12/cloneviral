@@ -641,7 +641,7 @@ def google(browser):
     r = p.request.get(f"{BASE}/api/google/callback?code=x&state=falso", max_redirects=0)
     assert "google_erro" in r.headers["location"]
     # sem site verificado (resposta simulada): só os dois números do Analytics, sem zero inventado na busca
-    so_site = {"start": "2026-11-18", "end": "2026-11-24", "term": "x", "search": None, "site": {"ok": True, "visits": 41, "whatsapp": 3}}
+    so_site = {"start": "2026-11-18", "end": "2026-11-24", "term": "x", "search": None, "site": {"ok": True, "visits": 41, "whatsapp": 3, "adsVisits": 44, "adsWhatsapp": 6}}
     p.route("**/api/google/report*", lambda rota: rota.fulfill(json=so_site))
     ir(p, "metricas")
     bloco = p.get_by_role("region", name="Google")
@@ -649,7 +649,9 @@ def google(browser):
     bloco.get_by_text("não só as de quem procurou o seu nome").wait_for()
     for fora in ["Apareceu na busca", "O que digitaram", "nome pesquisado:"]:
         assert bloco.get_by_text(fora).count() == 0, fora
-    assert bloco.get_by_text("41", exact=True).is_visible() and bloco.get_by_text("3", exact=True).is_visible()
+    bloco.get_by_role("heading", name="Anúncios do Google (pagos)").wait_for()
+    for numero in ["41", "3", "44", "6"]:
+        assert bloco.get_by_text(numero, exact=True).is_visible(), numero
     assert p.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "rolagem lateral no celular"
     amigo = browser.new_context(locale="pt-BR").new_page()
     vigiar(amigo)

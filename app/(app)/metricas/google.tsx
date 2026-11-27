@@ -59,11 +59,17 @@ export default function GoogleBlock() {
           <p className="muted small">De {fmtDate(`${data.start}T12:00:00Z`)} a {fmtDate(`${data.end}T12:00:00Z`)} {s && <> · nome pesquisado: <b>{data.term}</b></>}</p>
           {s && !s.ok && <div className="card err" style={{ marginBottom: 10 }}>Busca (Search Console): {s.error}</div>}
           {!site.ok && <div className="card err" style={{ marginBottom: 10 }}>Site (Analytics): {site.error}</div>}
+          <h3 style={{ margin: "6px 0 8px" }}>Busca gratuita</h3>
           <div className={"grid " + (s ? "g4" : "g2")}>
             {s && <Card title="Apareceu na busca" value={n(s.ok ? s.impressions : undefined)} note="vezes, nas buscas com o nome" />}
             {s && <Card title="Cliques" value={n(s.ok ? s.clicks : undefined)} note={s.ok && s.ctr !== null && s.position !== null ? `${fmtDec(s.ctr * 100)}% clicaram · posição média ${fmtDec(s.position)}` : "nas buscas com o nome"} />}
             <Card title="Visitas vindas do Google" value={n(site.ok ? site.visits : undefined)} note="todas as buscas" />
             <Card title="Cliques no WhatsApp" value={n(site.ok ? site.whatsapp : undefined)} note="nas visitas vindas do Google" />
+          </div>
+          <h3 style={{ margin: "16px 0 8px" }}>Anúncios do Google (pagos)</h3>
+          <div className="grid g2">
+            <Card title="Visitas pelos anúncios" value={n(site.ok ? site.adsVisits : undefined)} note="não entram na busca gratuita" />
+            <Card title="WhatsApp pelos anúncios" value={n(site.ok ? site.adsWhatsapp : undefined)} note="cliques nas visitas pagas" />
           </div>
           {s?.ok && (
             <div className="card" style={{ marginTop: 14 }}>
@@ -76,7 +82,7 @@ export default function GoogleBlock() {
               ))}
             </div>
           )}
-          <p className="tiny dim" style={{ marginTop: 10 }}>{s ? "Os dois primeiros números são só das buscas com o nome. Os dois últimos contam todas as visitas vindas da busca do Google: o Analytics não informa a palavra pesquisada." : "Estes números contam todas as visitas vindas da busca do Google, não só as de quem procurou o seu nome. A busca pelo nome aparece aqui quando o site for verificado no Search Console e escolhido na tela Conexões."}</p>
+          <p className="tiny dim" style={{ marginTop: 10 }}>{s ? "Na busca gratuita, os dois primeiros números são só das buscas com o nome. Os dois últimos contam todas as visitas vindas da busca do Google: o Analytics não informa a palavra pesquisada." : "A busca gratuita conta todas as visitas vindas da busca do Google, não só as de quem procurou o seu nome. A busca pelo nome aparece aqui quando o site for verificado no Search Console e escolhido na tela Conexões."}</p>
           <p className="tiny dim">{s && "Os dados da busca chegam com alguns dias de atraso e o Google esconde buscas muito raras. "}O Analytics só conta a partir de quando a medição foi instalada no site.</p>
         </>
       )}

@@ -152,8 +152,10 @@ const numbers = (c: Call): Reply => {
     return c.body.dimensions
       ? { body: { rows: [{ keys: ["fulano teste psiquiatra"], clicks: 4, impressions: 30, ctr: 0.13, position: 2 }] } }
       : { body: { rows: [{ clicks: 12, impressions: 200, ctr: 0.06, position: 1.4 }] } };
-  const whats = JSON.stringify(c.body).includes("generate_lead");
-  return { body: { rows: [{ metricValues: [{ value: whats ? "3" : "41" }] }] } };
+  const text = JSON.stringify(c.body);
+  const whats = text.includes("generate_lead");
+  const paid = text.includes('"cpc"');
+  return { body: { rows: [{ metricValues: [{ value: paid ? (whats ? "6" : "44") : whats ? "3" : "41" }] }] } };
 };
 async function chosen() {
   const x = await connected();
@@ -205,13 +207,15 @@ test("relatório soma as duas fontes com o filtro pelo nome", async () => {
     const r = await d.googleReport("dono", 28);
     assert.equal(r.term, "fulano teste");
     assert.deepEqual(r.search, { ok: true, impressions: 200, clicks: 12, ctr: 0.06, position: 1.4, queries: [{ query: "fulano teste psiquiatra", impressions: 30, clicks: 4 }] });
-    assert.deepEqual(r.site, { ok: true, visits: 41, whatsapp: 3 });
+    assert.deepEqual(r.site, { ok: true, visits: 41, whatsapp: 3, adsVisits: 44, adsWhatsapp: 6 });
     const search = calls.filter((c) => c.url.pathname.endsWith("/searchAnalytics/query"));
     assert.equal(search.length, 2);
     assert.ok(search.every((c) => c.url.pathname.includes(encodeURIComponent(SITE)) && c.body.dimensionFilterGroups[0].filters[0].expression === "fulano teste" && c.auth === "Bearer acesso-3"));
     const ga = calls.filter((c) => c.url.hostname === "analyticsdata.googleapis.com");
-    assert.equal(ga.length, 2);
-    assert.ok(ga.every((c) => c.url.pathname.includes("properties/222:runReport") && /"google"/.test(JSON.stringify(c.body)) && /"organic"/.test(JSON.stringify(c.body))));
+    assert.equal(ga.length, 4);
+    assert.ok(ga.every((c) => c.url.pathname.includes("properties/222:runReport") && /"google"/.test(JSON.stringify(c.body))));
+    // busca gratuita e anúncios pagos nunca somados: duas consultas para cada
+    for (const medium of ['"organic"', '"cpc"']) assert.equal(ga.filter((c) => JSON.stringify(c.body).includes(medium)).length, 2, medium);
   });
 });
 
@@ -220,7 +224,7 @@ test("sem linhas é zero, sem taxa inventada", async () => {
   await withFetch((c) => options(c) ?? { body: {} }, async () => {
     const r = await d.googleReport("dono", 7);
     assert.deepEqual(r.search, { ok: true, impressions: 0, clicks: 0, ctr: null, position: null, queries: [] });
-    assert.deepEqual(r.site, { ok: true, visits: 0, whatsapp: 0 });
+    assert.deepEqual(r.site, { ok: true, visits: 0, whatsapp: 0, adsVisits: 0, adsWhatsapp: 0 });
   });
 });
 
@@ -282,7 +286,7 @@ test("sem site verificado: salva só a propriedade e o relatório traz apenas o 
   await withFetch(numbers, async (calls) => {
     const r = await d.googleReport("dono", 28);
     assert.equal(r.search, null);
-    assert.deepEqual(r.site, { ok: true, visits: 41, whatsapp: 3 });
+    assert.deepEqual(r.site, { ok: true, visits: 41, whatsapp: 3, adsVisits: 44, adsWhatsapp: 6 });
     assert.equal(calls.some((c) => c.url.pathname.includes("searchAnalytics")), false);
   });
 });

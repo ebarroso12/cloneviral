@@ -87,7 +87,7 @@ export function reportRange(days: 7 | 28 | 90, now = new Date()) {
 
 export type Part<T> = ({ ok: true } & T) | { ok: false; error: string };
 type SearchData = { impressions: number; clicks: number; ctr: number | null; position: number | null; queries: { query: string; impressions: number; clicks: number }[] };
-type SiteData = { visits: number; whatsapp: number };
+type SiteData = { visits: number; whatsapp: number; adsVisits: number; adsWhatsapp: number };
 
 async function part<T>(fn: () => Promise<T>): Promise<Part<T>> {
   try {
@@ -113,13 +113,16 @@ async function searchNumbers(token: string, siteUrl: string, term: string, range
 
 async function siteNumbers(token: string, propertyId: string, range: { start: string; end: string }): Promise<SiteData> {
   const is = (fieldName: string, value: string) => ({ filter: { fieldName, stringFilter: { value } } });
-  const organic = [is("sessionSource", "google"), is("sessionMedium", "organic")];
+  const from = (medium: string) => [is("sessionSource", "google"), is("sessionMedium", medium)];
+  const organic = from("organic"); // busca gratuita
+  const paid = from("cpc"); // anúncios do Google, mostrados à parte
   const run = async (metric: string, filters: unknown[]) => {
     const j = await call(token, `${DATA_API}/${propertyId}:runReport`, { dateRanges: [{ startDate: range.start, endDate: range.end }], metrics: [{ name: metric }], dimensionFilter: { andGroup: { expressions: filters } } });
     return Number(j.rows?.[0]?.metricValues?.[0]?.value ?? 0);
   };
-  const [visits, whatsapp] = await Promise.all([run("sessions", organic), run("eventCount", [...organic, is("eventName", "generate_lead")])]);
-  return { visits, whatsapp };
+  const lead = is("eventName", "generate_lead");
+  const [visits, whatsapp, adsVisits, adsWhatsapp] = await Promise.all([run("sessions", organic), run("eventCount", [...organic, lead]), run("sessions", paid), run("eventCount", [...paid, lead])]);
+  return { visits, whatsapp, adsVisits, adsWhatsapp };
 }
 
 export async function googleReport(userId: string, days: 7 | 28 | 90) {
