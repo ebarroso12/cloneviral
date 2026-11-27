@@ -3,11 +3,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/client";
 import { PasswordInput, PageHead, useToast } from "@/components/ui";
+import GoogleCard from "./google";
+import type { googleStatus } from "@/lib/google";
 
 const mes = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const dt = (iso: string) => { const d = new Date(iso); return `${d.getDate()} de ${mes[d.getMonth()]} de ${d.getFullYear()}`; };
 
-export default function ConexoesView({ conn, ads, meta, app, aviso, flash, choices }: { conn: any; ads: any; meta: boolean; app: { appId: string; configId: string; redirect: string } | null; aviso: string; flash: Record<string, string>; choices: { igId: string; username: string }[] | null }) {
+export default function ConexoesView({ conn, ads, meta, app, aviso, flash, choices, google }: { conn: any; ads: any; meta: boolean; app: { appId: string; configId: string; redirect: string } | null; aviso: string; flash: Record<string, string>; choices: { igId: string; username: string }[] | null; google: { status: Awaited<ReturnType<typeof googleStatus>>; redirect: string } | null }) {
   const r = useRouter();
   const { toast, node } = useToast();
   const [busy, setBusy] = useState("");
@@ -71,6 +73,7 @@ export default function ConexoesView({ conn, ads, meta, app, aviso, flash, choic
           {conn?.demo && <p className="tiny dim" style={{ marginTop: 10 }}>Conta de demonstração: o total de anúncios é simulado.</p>}
         </div>
       </div>
+      {google && <GoogleCard status={google.status} redirect={google.redirect} flash={flash} />}
       {node}
     </>
   );

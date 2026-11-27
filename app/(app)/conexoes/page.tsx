@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { metaStatus } from "@/lib/metaApp";
 import { isOwner } from "@/lib/invites";
+import { googleStatus } from "@/lib/google";
 import { avisoSemMeta } from "@/lib/config";
 import ConexoesView from "./view";
 export const dynamic = "force-dynamic";
@@ -15,5 +16,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const app = await metaStatus();
   const origin = process.env.APP_URL || (process.env.VERCEL ? "" : "http://localhost:3000");
   const choices = pending && sp.escolher ? JSON.parse(JSON.stringify(pending.accounts)) : null;
-  return <ConexoesView choices={choices} conn={conn ? JSON.parse(JSON.stringify({ ...conn, token: undefined })) : null} ads={ads ?? null} meta={app.configured} app={(await isOwner(u.id)) && !app.fromServer ? { appId: app.appId, configId: app.configId, redirect: `${origin}/api/ig/callback` } : null} aviso={avisoSemMeta({ demo: !!conn?.demo, site: !!process.env.VERCEL })} flash={sp} />;
+  const owner = await isOwner(u.id);
+  const google = owner ? { status: await googleStatus(u.id), redirect: `${origin}/api/google/callback` } : null;
+  return <ConexoesView google={google} choices={choices} conn={conn ? JSON.parse(JSON.stringify({ ...conn, token: undefined })) : null} ads={ads ?? null} meta={app.configured} app={owner && !app.fromServer ? { appId: app.appId, configId: app.configId, redirect: `${origin}/api/ig/callback` } : null} aviso={avisoSemMeta({ demo: !!conn?.demo, site: !!process.env.VERCEL })} flash={sp} />;
 }
