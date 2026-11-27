@@ -188,6 +188,30 @@ test("Stories: formatos e quantidades sem IA; ajuste pede IA", async () => {
   await assert.rejects(() => genStories(ctx, { goal: "x", previous: [{ role: "a", text: "b" }], instruction: "curto" }), /IA ligada/);
 });
 
+test("Coleta: página recusada por ser pesada é pedida menor; falha depois da primeira não perde o lido", async () => {
+  const s = await setup;
+  const { syncAccount, encrypt } = await import("../lib/instagram");
+  await s.insert("ig_connection", "conv", { status: "connected", demo: false, igId: "99", token: encrypt("tk") });
+  const limits: string[] = [];
+  const media = (id: string) => ({ id, media_type: "IMAGE", timestamp: new Date().toISOString(), caption: id, like_count: 1 });
+  const r = await withFetch((c) => {
+    if (c.url.pathname.endsWith("/media")) {
+      const limit = c.url.searchParams.get("limit")!;
+      limits.push(limit);
+      if (c.url.searchParams.get("after")) return { status: 500, body: { error: { message: "instável", code: 2 } } };
+      if (Number(limit) > 20) return { status: 500, body: { error: { message: "Please reduce the amount of data you're asking for, then retry your request", code: 1 } } };
+      return { body: { data: [media("m1"), media("m2")], paging: { next: `https://graph.facebook.com/v27.0/99/media?limit=${limit}&after=x` } } };
+    }
+    if (c.url.pathname.endsWith("/99")) return { body: { username: "u", followers_count: 1, media_count: 4 } };
+    return { body: { data: [] } };
+  }, () => syncAccount("conv"));
+  assert.deepEqual(limits, ["50", "25", "12", "12"]);
+  assert.equal((await s.list("posts", "conv")).length, 2);
+  assert.equal(r.partial, true);
+  assert.ok(r.warnings.some((w: string) => w.startsWith("Lista de posts")));
+  assert.ok((await s.list("ig_connection", "conv"))[0].lastSync);
+});
+
 test("32 roteiros prontos próprios, sem repetição", async () => {
   const { READY } = await import("../lib/readyScripts");
   assert.equal(READY.length, 32);

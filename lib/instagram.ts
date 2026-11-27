@@ -87,6 +87,7 @@ export async function missingPermissions(token: string) {
 const DAY = 86400000;
 const RECENT_DAYS = 30; // posts recentes têm as métricas relidas a cada coleta
 const BATCH = 5;
+const WRITES = 10;
 
 /**
  * Sincroniza perfil, alcance diário, posts, métricas por post e audiência. Cada bloco é tolerante a
@@ -136,7 +137,10 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
   const conn = (await store.list("ig_connection", userId))[0];
   if (!conn || conn.demo) return { demo: true as const, partial: false, warnings: [] as string[] };
   if (conn.status !== "connected" || !conn.token) throw new Error(conn.status === "reautorizar" ? "A autorização do Instagram venceu. Refaça em Conexões." : "O Instagram está desconectado. Conecte de novo em Conexões.");
-  const end = Date.now() + (opts.deadlineMs ?? 45000);
+  const budget = opts.deadlineMs ?? 45000;
+  const end = Date.now() + budget;
+  // a lista de posts não pode gastar o tempo todo: sobra para o público e para as métricas
+  const listEnd = Date.now() + budget / 2;
   const late = () => Date.now() >= end;
   const warnings = new Set<string>();
   const warn = (what: string, e: any) => warnings.add(`${what}: ${String(e?.message ?? e).slice(0, 160)}`);
@@ -172,23 +176,63 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
   const seen: { mediaId: string; id: string }[] = [];
   let url: string | null = `${G}/${ig}/media?fields=id,caption,media_type,permalink,timestamp,thumbnail_url,media_url,like_count,comments_count&limit=50&access_token=${token}`;
   let pages = 0;
-  while (url && pages < 60 && (pages === 0 || !late())) {
-    const j: any = await gj(url);
-    for (const m of j.data as any[]) {
-      const id = scopedId(userId, m.id);
-      const doc = { type: m.media_type, publishedAt: m.timestamp, caption: m.caption ?? "", permalink: m.permalink, thumbnailUrl: m.thumbnail_url ?? m.media_url, likes: m.like_count ?? 0, comments: m.comments_count ?? 0 };
-      const ex = known.get(id);
-      // endereço de imagem da Meta muda a cada leitura; sozinho não justifica regravar
-      const unchanged = ex && (["type", "publishedAt", "caption", "permalink", "likes", "comments"] as const).every((k) => ex[k] === doc[k]) && !!ex.thumbnailUrl === !!doc.thumbnailUrl;
-      const saved = unchanged ? ex : ex ? await store.update("posts", id, userId, doc) : await store.insert("posts", userId, { ...doc, views: 0, reach: 0, saves: 0, shares: 0 }, id);
-      known.set(id, saved!);
-      seen.push({ mediaId: m.id, id });
+  while (url && pages < 300 && (pages === 0 || Date.now() < listEnd)) {
+    let j: any;
+    try {
+      j = await gj(url);
+    } catch (e) {
+      // a Meta recusa páginas pesadas em contas com muito conteúdo: pede menos itens por vez
+      const next: URL = new URL(url);
+      const limit = Number(next.searchParams.get("limit") ?? 50);
+      if (e instanceof MetaError && /reduce the amount of data/i.test(e.message) && limit > 3) {
+        next.searchParams.set("limit", String(Math.floor(limit / 2)));
+        url = next.toString();
+        continue;
+      }
+      if (!pages || (e instanceof MetaError && e.code === 190)) throw e;
+      warn("Lista de posts", e); // o que já foi lido fica; o resto vem na próxima coleta
+      break;
+    }
+    // gravações em paralelo: uma por vez estourava o tempo do servidor na primeira coleta
+    for (let i = 0; i < j.data.length; i += WRITES) {
+      await Promise.all((j.data as any[]).slice(i, i + WRITES).map(async (m) => {
+        const id = scopedId(userId, m.id);
+        const doc = { type: m.media_type, publishedAt: m.timestamp, caption: m.caption ?? "", permalink: m.permalink, thumbnailUrl: m.thumbnail_url ?? m.media_url, likes: m.like_count ?? 0, comments: m.comments_count ?? 0 };
+        const ex = known.get(id);
+        // endereço de imagem da Meta muda a cada leitura; sozinho não justifica regravar
+        const unchanged = ex && (["type", "publishedAt", "caption", "permalink", "likes", "comments"] as const).every((k) => ex[k] === doc[k]) && !!ex.thumbnailUrl === !!doc.thumbnailUrl;
+        const saved = unchanged ? ex : ex ? await store.update("posts", id, userId, doc) : await store.insert("posts", userId, { ...doc, views: 0, reach: 0, saves: 0, shares: 0 }, id);
+        known.set(id, saved!);
+        seen.push({ mediaId: m.id, id });
+      }));
     }
     url = j.paging?.next ?? null;
     pages++;
   }
   const listIncomplete = !!url;
 
+  // audiência
+  if (!late()) {
+    try {
+      const demo: Record<string, any> = {};
+      for (const b of ["age", "gender", "country", "city"]) {
+        const r = await gj(`${G}/${ig}/insights?metric=follower_demographics&period=lifetime&timeframe=this_month&metric_type=total_value&breakdown=${b}&access_token=${token}`);
+        demo[b] = r.data?.[0]?.total_value?.breakdowns?.[0]?.results ?? [];
+      }
+      const rec = (arr: any[], f: (x: any) => string) => Object.fromEntries(arr.map((x) => [f(x), x.value]));
+      const gender = rec(demo.gender, (x) => x.dimension_values[0]);
+      const age = rec(demo.age, (x) => x.dimension_values[0]);
+      const total = Object.values(age).reduce((a: number, b: any) => a + b, 0);
+      if (total > 0) {
+        const aud = { classifiedTotal: total, age, gender: { F: gender.F ?? 0, M: gender.M ?? 0, U: gender.U ?? 0 }, countries: rec(demo.country, (x) => x.dimension_values[0]), cities: rec(demo.city, (x) => x.dimension_values[0]) };
+        const ex = (await store.list("audience", userId))[0];
+        if (ex) await store.update("audience", ex.id, userId, aud);
+        else await store.insert("audience", userId, aud, scopedId(userId, "aud"));
+      } else warnings.add("Audiência: a Meta não devolveu dados desta vez.");
+    } catch (e) {
+      warn("Audiência", e);
+    }
+  }
   // métricas por post: primeiro os nunca medidos, depois os recentes
   const never = seen.filter((p) => !known.get(p.id)!.insightsAt).sort((a, b) => (known.get(a.id)!.insightsAttempts ?? 0) - (known.get(b.id)!.insightsAttempts ?? 0));
   const recent = seen.filter((p) => { const d = known.get(p.id)!; return d.insightsAt && !d.insightsUnavailable && Date.now() - Date.parse(d.publishedAt) < RECENT_DAYS * DAY; });
@@ -221,28 +265,6 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
   }
   const partial = listIncomplete || done < never.length;
 
-  // audiência
-  if (!late()) {
-    try {
-      const demo: Record<string, any> = {};
-      for (const b of ["age", "gender", "country", "city"]) {
-        const r = await gj(`${G}/${ig}/insights?metric=follower_demographics&period=lifetime&timeframe=this_month&metric_type=total_value&breakdown=${b}&access_token=${token}`);
-        demo[b] = r.data?.[0]?.total_value?.breakdowns?.[0]?.results ?? [];
-      }
-      const rec = (arr: any[], f: (x: any) => string) => Object.fromEntries(arr.map((x) => [f(x), x.value]));
-      const gender = rec(demo.gender, (x) => x.dimension_values[0]);
-      const age = rec(demo.age, (x) => x.dimension_values[0]);
-      const total = Object.values(age).reduce((a: number, b: any) => a + b, 0);
-      if (total > 0) {
-        const aud = { classifiedTotal: total, age, gender: { F: gender.F ?? 0, M: gender.M ?? 0, U: gender.U ?? 0 }, countries: rec(demo.country, (x) => x.dimension_values[0]), cities: rec(demo.city, (x) => x.dimension_values[0]) };
-        const ex = (await store.list("audience", userId))[0];
-        if (ex) await store.update("audience", ex.id, userId, aud);
-        else await store.insert("audience", userId, aud, scopedId(userId, "aud"));
-      } else warnings.add("Audiência: a Meta não devolveu dados desta vez.");
-    } catch (e) {
-      warn("Audiência", e);
-    }
-  }
   // anúncios: se estiverem conectados, relê o total; falha vira aviso e o número anterior fica
   if (!late()) await refreshAds(userId, token).catch((e) => warn("Anúncios", e));
   const list = [...warnings];

@@ -6,7 +6,8 @@ import { saveConnection } from "@/lib/connection";
 import { metaConfig } from "@/lib/metaApp";
 import { getStore, scopedId } from "@/lib/store";
 
-export const maxDuration = 60;
+// a coleta para sozinha em 45 s; a folga cobre o login e as últimas gravações
+export const maxDuration = 300;
 
 export async function GET(req: Request) {
   const origin = process.env.APP_URL || new URL(req.url).origin;
