@@ -122,6 +122,8 @@ export async function googleReport(userId: string, days: 7 | 28 | 90) {
   if (![7, 28, 90].includes(days)) throw new HttpError(400, "Escolha 7, 28 ou 90 dias.");
   const s = await googleStatus(userId);
   if (s.status === "connected" && (!s.siteUrl || !s.propertyId)) throw new HttpError(409, "Escolha o site e a propriedade do Analytics na tela Conexões.");
+  // filtro vazio traria todas as buscas e a tela as mostraria como buscas pelo nome
+  if (s.status === "connected" && !s.term) throw new HttpError(409, "Escreva o nome pesquisado na tela Conexões.");
   const token = await accessToken(userId);
   const range = reportRange(days);
   const [search, site] = await Promise.all([

@@ -258,3 +258,19 @@ test("outro usuário não vê relatório e período estranho é recusado", async
     assert.equal(calls.length, 0);
   });
 });
+
+test("sem nome pesquisado não consulta (filtro vazio traria todas as buscas)", async () => {
+  const { s, d } = await chosen();
+  const [conn] = await s.list("google_connection", "dono");
+  await s.update("google_connection", conn.id, "dono", { term: "" });
+  const user = await s.get("users", "dono");
+  await s.update("users", "dono", "dono", { name: "" });
+  try {
+    await withFetch(numbers, async (calls) => {
+      await rejects(d.googleReport("dono", 7), 409, /nome pesquisado/);
+      assert.equal(calls.length, 0);
+    });
+  } finally {
+    await s.update("users", "dono", "dono", { name: user!.name });
+  }
+});
