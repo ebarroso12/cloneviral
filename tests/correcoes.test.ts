@@ -241,3 +241,48 @@ test("5: análise de vídeo respeita um prazo único e limpa sobras antigas", as
   assert.equal(await s.get("videos", old.id), null);
   assert.ok((await s.get("videos", keep.id)) && (await s.get("videos", fresh.id)));
 });
+
+const modelOf = (c: Call) => c.body.model as string;
+const quota = { status: 429, body: { error: { message: "Rate limit exceeded: 20 requests per day" } } };
+
+test("cota: modelo gratuito esgotado passa para o próximo gratuito; pago não troca", async () => {
+  await setup;
+  const p = await import("../lib/providers");
+  const cfg = (kind: any, id: string) => ({ provider: p.findProvider(kind, id)!, model: p.findProvider(kind, id)!.models[0], key: KEY, account: "" });
+  const first = (id: string, kind: any = "text") => p.findProvider(kind, id)!.models[0];
+  await withFetch((c) => (modelOf(c) === first("gemini-gratis") ? quota : out("oi")), async (calls) => {
+    assert.equal(await p.askText(cfg("text", "gemini-gratis"), "s", "u"), "oi");
+    assert.equal(calls.length, 2);
+  });
+  await withFetch((c) => (modelOf(c) === first("groq-gratis") ? quota : { body: { choices: [{ message: { content: "oi" } }] } }), async (calls) => {
+    assert.equal(await p.askText(cfg("text", "groq-gratis"), "s", "u"), "oi");
+    assert.equal(calls.length, 2);
+  });
+  await withFetch((c) => (modelOf(c) === first("gemini-gratis", "video") ? quota : out("visto")), async () => assert.equal(await p.askVideo(cfg("video", "gemini-gratis"), Buffer.alloc(10), "video/mp4", "veja"), "visto"));
+  await withFetch(() => quota, async (calls) => {
+    await assert.rejects(() => p.askText(cfg("text", "gemini-gratis"), "s", "u"), /429/);
+    assert.deepEqual(calls.map(modelOf), p.findProvider("text", "gemini-gratis")!.models);
+  });
+  await withFetch(() => quota, async (calls) => {
+    await assert.rejects(() => p.askText(cfg("text", "gemini-pago"), "s", "u"), /429/);
+    assert.equal(calls.length, 1);
+  });
+});
+
+test("Varredura: um único pedido de IA para todos os roteiros; o que faltar vem do modelo local", async () => {
+  await setup;
+  const p = await import("../lib/providers");
+  await p.saveAi("dono", { kind: "text", provider: "gemini-gratis", key: KEY });
+  const { genSweep } = await import("../lib/ai");
+  const ctx: any = { userId: "dono", persona: { answers: {} }, business: { voice: { cta: "Chame no direct" } } };
+  const items = ["viral", "tecnico", "emocional"].map((type) => ({ type: type as any, topic: "sono" }));
+  await withFetch(() => out(JSON.stringify([{ hook: "g1", body: "c1", cta: "x", title: "t1", seconds: 20 }, { hook: "g2" }])), async (calls) => {
+    const r = await genSweep(ctx, { dest: "reel", items });
+    assert.equal(calls.length, 1);
+    assert.deepEqual(r.map((s) => [s.type, s.generator]), [["viral", "ia"], ["tecnico", "modelo"], ["emocional", "modelo"]]);
+    assert.equal(r[0].hook, "g1");
+    assert.ok(r.every((s) => s.hook && s.body && s.cta && s.title && s.seconds));
+  });
+  const off = await withFetch(() => ({ status: 500 }), () => genSweep(ctx, { dest: "reel", items }));
+  assert.deepEqual(off.map((s) => s.generator), ["modelo", "modelo", "modelo"]);
+});

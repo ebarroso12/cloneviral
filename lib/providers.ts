@@ -126,28 +126,38 @@ const gemini = (key: string, body: unknown, timeoutMs: number) => call(`${GEMINI
 const parts = (j: any): any[] => [...(j.steps ?? []).filter((s: any) => !s.type || s.type === "model_output").flatMap((s: any) => s.content ?? []), ...(j.outputs ?? [])];
 const textOf = (list: any[]) => list.filter((p) => p?.type === "text" || (!p?.type && p?.text)).map((p) => p.text).join("");
 
-export async function askText(cfg: AiCfg, system: string, user: string, timeoutMs = 90000): Promise<string> {
-  const { api, base } = cfg.provider;
-  let text = "";
-  if (api === "gemini") {
-    // no gratuito um modelo lotado (503) é comum: tenta os outros modelos gratuitos da lista
-    const models = cfg.provider.paid ? [cfg.model] : [cfg.model, ...cfg.provider.models.filter((m) => m !== cfg.model)];
-    for (let i = 0; ; i++) {
-      try {
-        text = textOf(parts(await gemini(cfg.key, { model: models[i], system_instruction: system, input: user }, timeoutMs)));
-        break;
-      } catch (e: any) {
-        if (i + 1 >= models.length || !/respondeu 503/.test(String(e?.message))) throw e;
-      }
+/**
+ * No gratuito é comum um modelo estar sem cota (429) ou lotado (503): tenta os outros gratuitos da lista.
+ * No pago não troca, para não cobrar um modelo que o dono não escolheu.
+ */
+async function eachModel<T>(cfg: AiCfg, fn: (model: string) => Promise<T>): Promise<T> {
+  const models = cfg.provider.paid ? [cfg.model] : [cfg.model, ...cfg.provider.models.filter((m) => m !== cfg.model)];
+  for (let i = 0; ; i++) {
+    try {
+      return await fn(models[i]);
+    } catch (e: any) {
+      if (i + 1 >= models.length || !/respondeu (429|503)/.test(String(e?.message))) throw e;
     }
   }
-  else if (api === "anthropic") {
-    const j = await call("https://api.anthropic.com/v1/messages", json({ "x-api-key": cfg.key, "anthropic-version": "2023-06-01" }, { model: cfg.model, max_tokens: 16000, system, messages: [{ role: "user", content: user }] }), timeoutMs);
-    text = (j.content ?? []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("");
-  } else if (api === "chat") {
-    const j = await call(`${base}/chat/completions`, json({ authorization: `Bearer ${cfg.key}` }, { model: cfg.model, messages: [{ role: "system", content: system }, { role: "user", content: user }] }), timeoutMs);
-    text = j.choices?.[0]?.message?.content ?? "";
-  }
+}
+
+/** timeoutMs é o prazo total, somando as trocas de modelo. */
+export async function askText(cfg: AiCfg, system: string, user: string, timeoutMs = 90000): Promise<string> {
+  const { api, base } = cfg.provider;
+  const end = Date.now() + timeoutMs;
+  const text = await eachModel(cfg, async (model) => {
+    const ms = Math.max(1, end - Date.now());
+    if (api === "gemini") return textOf(parts(await gemini(cfg.key, { model, system_instruction: system, input: user }, ms)));
+    if (api === "anthropic") {
+      const j = await call("https://api.anthropic.com/v1/messages", json({ "x-api-key": cfg.key, "anthropic-version": "2023-06-01" }, { model, max_tokens: 16000, system, messages: [{ role: "user", content: user }] }), ms);
+      return (j.content ?? []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("") as string;
+    }
+    if (api === "chat") {
+      const j = await call(`${base}/chat/completions`, json({ authorization: `Bearer ${cfg.key}` }, { model, messages: [{ role: "system", content: system }, { role: "user", content: user }] }), ms);
+      return (j.choices?.[0]?.message?.content ?? "") as string;
+    }
+    return "";
+  });
   if (!text) throw new Error("A IA não devolveu texto.");
   return text;
 }
@@ -198,7 +208,7 @@ export async function askVideo(cfg: AiCfg, video: Buffer, mime: string, prompt: 
     if (file.state && file.state !== "ACTIVE") throw new Error("A IA não conseguiu preparar o vídeo. Tente um arquivo menor.");
     part = { type: "video", uri: file.uri, mime_type: mime };
   }
-  const text = textOf(parts(await gemini(cfg.key, { model: cfg.model, input: [part, { type: "text", text: prompt }] }, left(180000))));
+  const text = await eachModel(cfg, async (model) => textOf(parts(await gemini(cfg.key, { model, input: [part, { type: "text", text: prompt }] }, left(180000)))));
   if (!text) throw new Error("A IA não devolveu a análise.");
   return text;
 }

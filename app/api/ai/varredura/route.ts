@@ -1,8 +1,9 @@
 import { route, loadCtx, bad } from "@/lib/api";
 import { getStore } from "@/lib/store";
-import { genScripts, analyzeTop, patternsFromText, type ScriptType, type Pattern } from "@/lib/ai";
+import { genSweep, analyzeTop, patternsFromText, type ScriptType, type Pattern } from "@/lib/ai";
 import type { Post } from "@/lib/metrics";
 
+export const maxDuration = 120;
 const TARGETS = ["perfil", "um-perfil", "nicho", "conteudo"];
 export const POST = route(async (user, req) => {
   const b = await req.json();
@@ -22,12 +23,11 @@ export const POST = route(async (user, req) => {
   for (const p of patterns) savedPatterns.push(await store.insert("patterns", user.id, { ...p, sweepId: sweep.id }));
   const ctx = await loadCtx(user.id);
   const topics = target === "perfil" ? patterns.map((p) => p.examples[0]).filter(Boolean) : [];
+  const items = Array.from({ length: scriptsN }, (_, i) => ({ type: types[i % types.length], pattern: patterns[i % patterns.length], topic: topics.length ? topics[i % topics.length] : undefined }));
+  const written = await genSweep(ctx, { dest: sweep.dest, theme: sweep.theme, seconds: b.duration && b.duration !== "variado" ? Number(b.duration) : undefined, items });
   const out = [];
-  for (let i = 0; i < scriptsN; i++) {
-    const type = types[i % types.length];
-    const [s] = await genScripts(ctx, { type, dest: sweep.dest, theme: sweep.theme, n: 1, seconds: b.duration && b.duration !== "variado" ? Number(b.duration) : undefined, patterns: [patterns[i % patterns.length]], topics: topics.length ? [topics[i % topics.length]] : undefined });
-    if (s) out.push(await store.insert("scripts", user.id, { ...s, source: "varredura", sweepId: sweep.id, patternId: savedPatterns[i % savedPatterns.length]?.id, recorded: false }));
-  }
+  for (const [i, s] of written.entries())
+    out.push(await store.insert("scripts", user.id, { ...s, source: "varredura", sweepId: sweep.id, patternId: savedPatterns[i % savedPatterns.length]?.id, recorded: false }));
   await store.update("sweeps", sweep.id, user.id, { status: "pronto", delivered: out.length });
   return { sweepId: sweep.id, patterns: savedPatterns, scripts: out };
 });

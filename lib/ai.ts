@@ -36,20 +36,20 @@ const lc = (s?: string) => (s ?? "").replace(/[.\s]+$/, "");
 export type AiAnswer<T> = { on: boolean; data: T | null; error?: string };
 
 /** Como llmJson, mas diz se havia IA ligada e por que não veio resposta. */
-export async function askJson<T>(system: string, user: string, userId?: string): Promise<AiAnswer<T>> {
+export async function askJson<T>(system: string, user: string, userId?: string, timeoutMs?: number): Promise<AiAnswer<T>> {
   let on = false;
   try {
     const cfg = await getAi("text", userId);
     if (!cfg) return { on, data: null };
     on = true;
-    return { on, data: readJson<T>(await askText(cfg, system, user)) };
+    return { on, data: readJson<T>(await askText(cfg, system, user, timeoutMs)) };
   } catch (e: any) {
     const error = e?.name === "TimeoutError" ? "a IA demorou demais para responder" : String(e?.message ?? e).slice(0, 200);
     console.error(error);
     return { on, data: null, error };
   }
 }
-export const llmJson = async <T>(system: string, user: string, userId?: string) => (await askJson<T>(system, user, userId)).data;
+export const llmJson = async <T>(system: string, user: string, userId?: string, timeoutMs?: number) => (await askJson<T>(system, user, userId, timeoutMs)).data;
 
 /** Para o que não tem modelo local: sem IA, pede para ligar; com IA, conta o que deu errado. */
 export function aiFailure(a: AiAnswer<unknown>, off: string): HttpError {
@@ -87,6 +87,26 @@ export async function genScripts(c: Ctx, o: { type: ScriptType; dest: "reel" | "
     out.push(templateScript(c, o.type, o.dest, topic, i, o.seconds, p));
   }
   return out;
+}
+
+export type SweepItem = { type: ScriptType; pattern?: Pattern; topic?: string };
+const SWEEP_MS = 60000; // passou disso, entrega pelo modelo local
+
+/** Roteiros da Varredura num único pedido à IA: um por roteiro gastava a cota gratuita e passava do tempo. */
+export async function genSweep(c: Ctx, o: { dest: "reel" | "criativo"; theme?: string; seconds?: number; items: SweepItem[] }): Promise<ScriptOut[]> {
+  const llm = await llmJson<Partial<ScriptOut>[]>(
+    "Você escreve roteiros curtos de vídeo em português do Brasil. Responda SOMENTE um array JSON de objetos {title,seconds,hook,body,cta}.",
+    `${voiceBrief(c)}\nEscreva ${o.items.length} roteiros diferentes para ${o.dest}, um para cada item abaixo, na mesma ordem. Tema: ${o.theme || "variado, dentro do nicho"}.${o.seconds ? ` Duração de cada um: ${o.seconds} segundos.` : ""}\nItens (tipo e padrão de estrutura): ${JSON.stringify(o.items.map((x) => ({ tipo: x.type, assunto: x.topic, padrao: x.pattern })))}`,
+    c.userId,
+    SWEEP_MS,
+  );
+  return o.items.map((item, i): ScriptOut => {
+    const topic = o.theme?.trim() || item.topic || c.persona.answers.dor || c.business.focus || "o seu assunto";
+    const local = templateScript(c, item.type, o.dest, topic, i, o.seconds, item.pattern);
+    const s = Array.isArray(llm) ? llm[i] : undefined;
+    if (typeof s?.hook !== "string" || typeof s.body !== "string" || !s.hook || !s.body) return { ...local, generator: "modelo" };
+    return { generator: "ia", type: item.type, dest: o.dest, seconds: o.seconds || Number(s.seconds) || local.seconds, title: String(s.title || local.title), hook: applyVoice(s.hook, c.business), body: applyVoice(s.body, c.business), cta: applyVoice(String(s.cta || local.cta), c.business) };
+  });
 }
 
 function hookFor(kind: Pattern["hookType"] | undefined, topic: string, i: number, type: ScriptType, c: Ctx) {

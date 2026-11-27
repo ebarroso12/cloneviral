@@ -99,8 +99,8 @@ test("Gemini gratuito lotado tenta outro modelo; outro erro não insiste; pago n
     assert.equal(await p.askText(cfg, "s", "u"), "oi");
     assert.deepEqual(calls.map((c) => c.body.model), free.models.slice(0, 2));
   });
-  await withFetch(() => ({ status: 429, body: {} }), async (calls) => {
-    await assert.rejects(() => p.askText(cfg, "s", "u"), /429/);
+  await withFetch(() => ({ status: 400, body: {} }), async (calls) => {
+    await assert.rejects(() => p.askText(cfg, "s", "u"), /400/);
     assert.equal(calls.length, 1);
   });
   const paid = p.findProvider("text", "gemini-pago")!;
