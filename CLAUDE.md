@@ -65,7 +65,7 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 
 ## Limitações abertas
 
-Google: só testado com respostas simuladas até a primeira conexão real. Instagram: conexão, coleta e consulta de um perfil de referência provados com a conta real em 27/11/2026; publicação, anúncios e sugestão de perfis, não. De IA, só o Gemini gratuito foi provado com chave real em 27/11/2026 (texto com `gemini-3.6-flash` e `gemini-3.5-flash-lite`; vídeo curto no próprio pedido); envio pela API de arquivos e os outros provedores, não. Publicado na Vercel com Supabase real (ver `replica/deploy.md`). No site, o vídeo vai em pedaços para o banco (`lib/videos.ts`) e a publicação é chamada pelo GitHub Actions.
+Google: conexão real e números do Analytics conferidos em 27/11/2026; a parte do Search Console, só simulada (site não verificado). Instagram: conexão, coleta, consulta de perfil, leitura de anúncios e sugestão de perfis provados com a conta real em 27/11/2026 (as duas últimas rodando as funções direto contra o banco, não pela tela); publicação, não. De IA, só o Gemini gratuito foi provado com chave real em 27/11/2026 (texto com `gemini-3.6-flash` e `gemini-3.5-flash-lite`; vídeo curto no próprio pedido); envio pela API de arquivos e os outros provedores, não. Publicado na Vercel com Supabase real (ver `replica/deploy.md`). No site, o vídeo vai em pedaços para o banco (`lib/videos.ts`) e a publicação é chamada pelo GitHub Actions.
 
 ## Pipeline replica e regras do projeto
 
