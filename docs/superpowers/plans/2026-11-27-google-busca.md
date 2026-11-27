@@ -32,7 +32,7 @@
 
 ---
 
-### Tarefa 1: Conexão com o Google
+### Task 1: Conexão com o Google
 
 **Files:**
 - Create: `lib/google.ts`, `app/api/google/app/route.ts`, `app/api/google/connect/route.ts`, `app/api/google/callback/route.ts`, `app/api/google/disconnect/route.ts`
@@ -66,7 +66,7 @@ Validação: `clientId` casa `/^[\w-]+\.apps\.googleusercontent\.com$/`; `secret
 - [ ] **Step 5:** `npx tsx --test tests/google.test.ts` → PASS.
 - [ ] **Step 6:** `git commit -am` após `git add` dos novos: "Conexão somente leitura com o Google".
 
-### Tarefa 2: Consulta dos números e escolhas
+### Task 2: Consulta dos números e escolhas
 
 **Files:**
 - Create: `lib/googleData.ts`, `app/api/google/options/route.ts` (GET), `app/api/google/settings/route.ts` (POST), `app/api/google/report/route.ts` (GET `?dias=7|28|90`)
@@ -107,7 +107,7 @@ Chamadas:
 - [ ] **Step 4:** rodar → PASS.
 - [ ] **Step 5:** commit "Números da busca pelo nome e do site".
 
-### Tarefa 3: Quadro Google na tela Conexões
+### Task 3: Quadro Google na tela Conexões
 
 **Files:**
 - Create: `app/(app)/conexoes/google.tsx` (cliente, `GoogleCard`)
@@ -119,7 +119,7 @@ Chamadas:
 - [ ] **Step 2:** `npx tsc --noEmit && npm run build` → sem erro.
 - [ ] **Step 3:** commit "Quadro do Google em Conexões".
 
-### Tarefa 4: Bloco Google em Métricas
+### Task 4: Bloco Google em Métricas
 
 **Files:**
 - Create: `app/(app)/metricas/google.tsx` (cliente, `GoogleBlock()`)
@@ -133,7 +133,7 @@ Chamadas:
 - [ ] **Step 3:** `npm test`, `npx tsc --noEmit`, `npm run build`, fluxos do `CLAUDE.md` em pasta vazia → tudo passa (S07, notícias, pode falhar por limite externo do Google).
 - [ ] **Step 4:** commit "Bloco Google em Métricas".
 
-### Tarefa 5: Guia e documentação
+### Task 5: Guia e documentação
 
 **Files:** Modify: `replica/guia-gratis.md`, `README.md`, `CLAUDE.md`
 
