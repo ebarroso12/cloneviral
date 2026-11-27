@@ -286,3 +286,39 @@ test("Varredura: um único pedido de IA para todos os roteiros; o que faltar vem
   const off = await withFetch(() => ({ status: 500 }), () => genSweep(ctx, { dest: "reel", items }));
   assert.deepEqual(off.map((s) => s.generator), ["modelo", "modelo", "modelo"]);
 });
+
+test("lentidão: modelo gratuito que demora cede a vez ao próximo; o segundo usa o tempo que sobra; pago não troca", async () => {
+  await setup;
+  const p = await import("../lib/providers");
+  const cfg = (id: string) => ({ provider: p.findProvider("text", id)!, model: p.findProvider("text", id)!.models[0], key: KEY, account: "" });
+  // cada modelo responde depois do atraso pedido, ou é cortado pelo prazo
+  const timed = async (delay: (i: number) => number, fn: (models: string[]) => Promise<void>) => {
+    const real = globalThis.fetch;
+    const models: string[] = [];
+    globalThis.fetch = ((_u: any, init: any) => new Promise((resolve, reject) => {
+      models.push(JSON.parse(init.body).model);
+      const t = setTimeout(() => resolve(new Response(JSON.stringify(out("oi").body))), delay(models.length - 1));
+      const stop = () => { clearTimeout(t); reject(init.signal.reason); };
+      if (init.signal.aborted) stop();
+      else init.signal.addEventListener("abort", stop);
+    })) as typeof fetch;
+    try { await fn(models); } finally { globalThis.fetch = real; }
+  };
+  await timed((i) => (i ? 5 : 5000), async (models) => {
+    assert.equal(await p.askText(cfg("gemini-gratis"), "s", "u", 3000, 60), "oi");
+    assert.equal(models.length, 2);
+  });
+  // o segundo passa do limite de troca, mas ainda dentro do prazo total: a resposta vale
+  await timed((i) => (i ? 250 : 5000), async (models) => {
+    assert.equal(await p.askText(cfg("gemini-gratis"), "s", "u", 3000, 60), "oi");
+    assert.equal(models.length, 2);
+  });
+  await timed(() => 5000, async (models) => {
+    await assert.rejects(() => p.askText(cfg("gemini-gratis"), "s", "u", 300, 60), (e: any) => e.name === "TimeoutError");
+    assert.equal(models.length, 2);
+  });
+  await timed(() => 150, async (models) => {
+    assert.equal(await p.askText(cfg("gemini-pago"), "s", "u", 3000, 60), "oi");
+    assert.equal(models.length, 1);
+  });
+});

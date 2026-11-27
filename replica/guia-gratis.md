@@ -28,7 +28,7 @@ Conexão e coleta provadas com uma conta real em 27/11/2026. Se aparecer erro, c
 
 ### No site publicado (em vez do computador)
 
-- Endereço de retorno na Meta: `https://cloneviral-iota.vercel.app/api/ig/callback`.
+- Endereço de retorno na Meta: `https://cloneviralapp.vercel.app/api/ig/callback`. O endereço anterior, `cloneviral-iota.vercel.app`, continua abrindo o site.
 - Entre como dono, abra **Conexões** e grave o ID do app, a chave secreta e, se houver, o ID da configuração no quadro **Seu app da Meta**. Não precisa mexer na Vercel.
 - Para os anúncios, depois de conectar o Instagram use **Autorizar leitura de anúncios** (permissão `ads_read`; com o Login para Empresas, inclua-a na configuração) e então **Conectar anúncios**.
 

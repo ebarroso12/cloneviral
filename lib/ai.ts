@@ -90,7 +90,7 @@ export async function genScripts(c: Ctx, o: { type: ScriptType; dest: "reel" | "
 }
 
 export type SweepItem = { type: ScriptType; pattern?: Pattern; topic?: string };
-const SWEEP_MS = 60000; // passou disso, entrega pelo modelo local
+const SWEEP_MS = 90000; // passou disso, entrega pelo modelo local
 
 /** Roteiros da Varredura num único pedido à IA: um por roteiro gastava a cota gratuita e passava do tempo. */
 export async function genSweep(c: Ctx, o: { dest: "reel" | "criativo"; theme?: string; seconds?: number; items: SweepItem[] }): Promise<ScriptOut[]> {

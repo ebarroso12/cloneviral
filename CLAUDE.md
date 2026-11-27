@@ -44,7 +44,7 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 
 ## Regras que o código já garante (não desfazer)
 
-- Regra do dono: **nenhum gasto** sem ele escolher. Provedor pago exige a autorização marcada na tela `/ia` e roda só para o dono; no ambiente, a Anthropic exige `RV_ALLOW_PAID_AI=1`. No gratuito só entram modelos da lista, e a falta de cota (429) ou lotação (503) passa para o próximo gratuito; o Gemini gratuito tem cota diária baixa, então um fluxo novo pede tudo num único pedido (como `genSweep`).
+- Regra do dono: **nenhum gasto** sem ele escolher. Provedor pago exige a autorização marcada na tela `/ia` e roda só para o dono; no ambiente, a Anthropic exige `RV_ALLOW_PAID_AI=1`. No gratuito só entram modelos da lista, e a falta de cota (429) ou lotação (503) passa para o próximo gratuito, e no texto a demora acima de 25 s também (uma vez); o Gemini gratuito tem cota diária baixa, então um fluxo novo pede tudo num único pedido (como `genSweep`).
 - Número de perfil de terceiro (`lib/discovery.ts`) só aparece se a Meta devolveu; sugestão da IA não confirmada é descartada.
 - Agendamento só nasce em `schedulePost` (`/api/schedule`); `scheduled_posts` na API genérica é leitura e exclusão.
 - Conta do Instagram só é gravada por `saveConnection` (não mistura contas; troca pede confirmação e guarda cópia).

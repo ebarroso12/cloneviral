@@ -4,7 +4,7 @@ Painel de métricas e máquina de conteúdo para Instagram, reconstruído a part
 
 ## No ar
 
-https://cloneviral-iota.vercel.app (Vercel + Supabase, ver `replica/deploy.md`).
+https://cloneviralapp.vercel.app (Vercel + Supabase, ver `replica/deploy.md`).
 
 A Vercel lê a cópia `edsonbdados-Bancodados/cloneviral`. Neste computador, o `git push origin` grava nas duas. Em um clone novo:
 

@@ -128,25 +128,32 @@ const textOf = (list: any[]) => list.filter((p) => p?.type === "text" || (!p?.ty
 
 /**
  * No gratuito é comum um modelo estar sem cota (429) ou lotado (503): tenta os outros gratuitos da lista.
- * No pago não troca, para não cobrar um modelo que o dono não escolheu.
+ * Com slowMs, quem passa desse tempo também cede a vez, uma única vez: o seguinte usa o que sobrar do prazo,
+ * para um pedido grande não ser cortado em todos. No pago não troca, para não cobrar um modelo não escolhido.
  */
-async function eachModel<T>(cfg: AiCfg, fn: (model: string) => Promise<T>): Promise<T> {
+async function eachModel<T>(cfg: AiCfg, fn: (model: string, capMs: number) => Promise<T>, slowMs = Infinity): Promise<T> {
   const models = cfg.provider.paid ? [cfg.model] : [cfg.model, ...cfg.provider.models.filter((m) => m !== cfg.model)];
+  let switched = false;
   for (let i = 0; ; i++) {
+    const cap = !switched && i + 1 < models.length ? slowMs : Infinity;
     try {
-      return await fn(models[i]);
+      return await fn(models[i], cap);
     } catch (e: any) {
-      if (i + 1 >= models.length || !/respondeu (429|503)/.test(String(e?.message))) throw e;
+      const slow = e?.name === "TimeoutError" && cap !== Infinity;
+      if (i + 1 >= models.length || !(slow || /respondeu (429|503)/.test(String(e?.message)))) throw e;
+      if (slow) switched = true;
     }
   }
 }
 
+const SLOW_MS = 25000;
+
 /** timeoutMs é o prazo total, somando as trocas de modelo. */
-export async function askText(cfg: AiCfg, system: string, user: string, timeoutMs = 90000): Promise<string> {
+export async function askText(cfg: AiCfg, system: string, user: string, timeoutMs = 90000, slowMs = SLOW_MS): Promise<string> {
   const { api, base } = cfg.provider;
   const end = Date.now() + timeoutMs;
-  const text = await eachModel(cfg, async (model) => {
-    const ms = Math.max(1, end - Date.now());
+  const text = await eachModel(cfg, async (model, cap) => {
+    const ms = Math.max(1, Math.min(cap, end - Date.now()));
     if (api === "gemini") return textOf(parts(await gemini(cfg.key, { model, system_instruction: system, input: user }, ms)));
     if (api === "anthropic") {
       const j = await call("https://api.anthropic.com/v1/messages", json({ "x-api-key": cfg.key, "anthropic-version": "2023-06-01" }, { model, max_tokens: 16000, system, messages: [{ role: "user", content: user }] }), ms);
@@ -157,7 +164,7 @@ export async function askText(cfg: AiCfg, system: string, user: string, timeoutM
       return (j.choices?.[0]?.message?.content ?? "") as string;
     }
     return "";
-  });
+  }, slowMs);
   if (!text) throw new Error("A IA não devolveu texto.");
   return text;
 }

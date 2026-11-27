@@ -1,6 +1,6 @@
 # Deploy: Radar Viral
 
-Data: 26/11/2026. **Publicado** em https://cloneviral-iota.vercel.app (Vercel, time `edsonbdados-9184`, projeto `cloneviral`, região gru1). Banco: Supabase `wwflyczpnizlmnzczqsl`.
+Data: 26/11/2026. **Publicado** em https://cloneviralapp.vercel.app (Vercel, time `edsonbdados-9184`, projeto `cloneviral`, região gru1). Banco: Supabase `wwflyczpnizlmnzczqsl`.
 
 Atenção: o projeto da Vercel está ligado à cópia `edsonbdados-Bancodados/cloneviral`, não a `ebarroso12/cloneviral`. A conta `ebarroso12` é colaboradora da cópia e o `git push origin` do computador do dono grava nas duas.
 
