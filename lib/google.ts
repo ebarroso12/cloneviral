@@ -29,6 +29,12 @@ export async function saveGoogleApp(userId: string, b: { clientId?: unknown; sec
   else await store.insert("google_app", userId, doc, scopedId(userId, "google_app"));
 }
 
+/** Sugestão do nome pesquisado: o nome da conta, sem o título. */
+async function ownName(userId: string) {
+  const u = await getStore().get("users", userId);
+  return String(u?.name ?? "").trim().replace(/^(dr|dra|prof|profa)\.?\s+/i, "").toLowerCase().slice(0, 60);
+}
+
 export async function googleStatus(userId: string) {
   const app = await appDoc(userId);
   const c = await connDoc(userId);
@@ -39,7 +45,7 @@ export async function googleStatus(userId: string) {
     siteUrl: String(c?.siteUrl ?? ""),
     propertyId: String(c?.propertyId ?? ""),
     propertyName: String(c?.propertyName ?? ""),
-    term: String(c?.term ?? ""),
+    term: String(c?.term || (await ownName(userId))),
   };
 }
 

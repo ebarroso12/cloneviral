@@ -134,3 +134,127 @@ test("desconectar apaga o token mesmo se a revogação falhar", async () => {
   assert.equal(doc.token, null);
   assert.equal((await g.googleStatus("dono")).status, "disconnected");
 });
+
+const SITE = "sc-domain:exemplo.test";
+const options = (c: Call): Reply | null => {
+  if (c.url.hostname === "oauth2.googleapis.com") return { body: { access_token: "acesso-3" } };
+  if (c.url.pathname === "/webmasters/v3/sites") return { body: { siteEntry: [{ siteUrl: SITE, permissionLevel: "siteOwner" }, { siteUrl: "https://alheio.test/", permissionLevel: "siteUnverifiedUser" }] } };
+  if (c.url.hostname === "analyticsadmin.googleapis.com")
+    return c.url.searchParams.get("pageToken")
+      ? { body: { accountSummaries: [{ propertySummaries: [{ property: "properties/222", displayName: "Segunda" }] }] } }
+      : { body: { accountSummaries: [{ propertySummaries: [{ property: "properties/111", displayName: "Primeira" }] }], nextPageToken: "p2" } };
+  return null;
+};
+const numbers = (c: Call): Reply => {
+  const o = options(c);
+  if (o) return o;
+  if (c.url.pathname.endsWith("/searchAnalytics/query"))
+    return c.body.dimensions
+      ? { body: { rows: [{ keys: ["fulano teste psiquiatra"], clicks: 4, impressions: 30, ctr: 0.13, position: 2 }] } }
+      : { body: { rows: [{ clicks: 12, impressions: 200, ctr: 0.06, position: 1.4 }] } };
+  const whats = JSON.stringify(c.body).includes("generate_lead");
+  return { body: { rows: [{ metricValues: [{ value: whats ? "3" : "41" }] }] } };
+};
+async function chosen() {
+  const x = await connected();
+  const d = await import("../lib/googleData");
+  await withFetch(numbers, () => d.saveGoogleSettings("dono", { siteUrl: SITE, propertyId: "222", term: "Fulano Teste" }));
+  return { ...x, d };
+}
+
+test("intervalo termina três dias antes", async () => {
+  const { reportRange } = await import("../lib/googleData");
+  assert.deepEqual(reportRange(7, new Date("2026-11-27T12:00:00Z")), { start: "2026-11-18", end: "2026-11-24" });
+  assert.deepEqual(reportRange(28, new Date("2026-03-02T12:00:00Z")), { start: "2026-01-31", end: "2026-02-27" });
+});
+
+test("opções trazem só site verificado e todas as páginas de propriedades", async () => {
+  await connected();
+  const d = await import("../lib/googleData");
+  await withFetch(numbers, async () => {
+    const o = await d.googleOptions("dono");
+    assert.deepEqual(o.sites, [SITE]);
+    assert.deepEqual(o.properties, [{ id: "111", name: "Primeira" }, { id: "222", name: "Segunda" }]);
+  });
+});
+
+test("nome sugerido vem da conta do dono, sem o título", async () => {
+  const { g } = await connected();
+  assert.equal((await g.googleStatus("dono")).term, "fulano teste");
+});
+
+test("só aceita site e propriedade que a conta tem", async () => {
+  await connected();
+  const d = await import("../lib/googleData");
+  await withFetch(numbers, async () => {
+    await rejects(d.saveGoogleSettings("dono", { siteUrl: "https://alheio.test/" }), 400);
+    await rejects(d.saveGoogleSettings("dono", { propertyId: "999" }), 400);
+    await rejects(d.saveGoogleSettings("outro", { term: "x y" }), 403);
+  });
+});
+
+test("termo vazio é recusado", async () => {
+  const { d } = await chosen();
+  await rejects(d.saveGoogleSettings("dono", { term: "   " }), 400);
+  await rejects(d.saveGoogleSettings("dono", { term: "a".repeat(61) }), 400);
+});
+
+test("relatório soma as duas fontes com o filtro pelo nome", async () => {
+  const { d } = await chosen();
+  await withFetch(numbers, async (calls) => {
+    const r = await d.googleReport("dono", 28);
+    assert.equal(r.term, "fulano teste");
+    assert.deepEqual(r.search, { ok: true, impressions: 200, clicks: 12, ctr: 0.06, position: 1.4, queries: [{ query: "fulano teste psiquiatra", impressions: 30, clicks: 4 }] });
+    assert.deepEqual(r.site, { ok: true, visits: 41, whatsapp: 3 });
+    const search = calls.filter((c) => c.url.pathname.endsWith("/searchAnalytics/query"));
+    assert.equal(search.length, 2);
+    assert.ok(search.every((c) => c.url.pathname.includes(encodeURIComponent(SITE)) && c.body.dimensionFilterGroups[0].filters[0].expression === "fulano teste" && c.auth === "Bearer acesso-3"));
+    const ga = calls.filter((c) => c.url.hostname === "analyticsdata.googleapis.com");
+    assert.equal(ga.length, 2);
+    assert.ok(ga.every((c) => c.url.pathname.includes("properties/222:runReport") && /"google"/.test(JSON.stringify(c.body)) && /"organic"/.test(JSON.stringify(c.body))));
+  });
+});
+
+test("sem linhas é zero, sem taxa inventada", async () => {
+  const { d } = await chosen();
+  await withFetch((c) => options(c) ?? { body: {} }, async () => {
+    const r = await d.googleReport("dono", 7);
+    assert.deepEqual(r.search, { ok: true, impressions: 0, clicks: 0, ctr: null, position: null, queries: [] });
+    assert.deepEqual(r.site, { ok: true, visits: 0, whatsapp: 0 });
+  });
+});
+
+test("falha de uma fonte não derruba a outra", async () => {
+  const { d } = await chosen();
+  const deny = (host: string) => (c: Call): Reply => (c.url.hostname === host ? { status: 403, body: { error: { message: "sem permissão " + "x".repeat(400) } } } : numbers(c));
+  await withFetch(deny("analyticsdata.googleapis.com"), async () => {
+    const r = await d.googleReport("dono", 7);
+    assert.equal(r.search.ok, true);
+    assert.equal(r.site.ok, false);
+    assert.ok(!r.site.ok && /sem permissão/.test(r.site.error) && r.site.error.length <= 200);
+    assert.equal("visits" in r.site, false);
+  });
+  await withFetch(deny("www.googleapis.com"), async () => {
+    const r = await d.googleReport("dono", 7);
+    assert.equal(r.search.ok, false);
+    assert.equal(r.site.ok, true);
+  });
+});
+
+test("sem site ou propriedade escolhidos não consulta", async () => {
+  await connected(); // conexão nova: ainda sem site e sem propriedade
+  const d = await import("../lib/googleData");
+  await withFetch(numbers, async (calls) => {
+    await rejects(d.googleReport("dono", 7), 409, /Escolha/);
+    assert.equal(calls.length, 0);
+  });
+});
+
+test("outro usuário não vê relatório e período estranho é recusado", async () => {
+  const { d } = await chosen();
+  await withFetch(numbers, async (calls) => {
+    await rejects(d.googleReport("outro", 7), 403);
+    await rejects(d.googleReport("dono", 365 as any), 400);
+    assert.equal(calls.length, 0);
+  });
+});
