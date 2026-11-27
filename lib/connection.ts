@@ -42,7 +42,7 @@ export async function saveConnection(userId: string, o: { token: string; expires
     authorizedUntil: new Date(Date.now() + o.expiresIn * 1000).toISOString(),
     measuringSince: same ? cur.measuringSince : new Date().toISOString().slice(0, 10),
     syncError: null,
-    ...(same ? {} : { lastSync: null, lastSyncAttempt: null, syncWarnings: [], syncPartial: false, picture: null, name: o.account.username, bio: "", link: "" }),
+    ...(same ? {} : { lastSync: null, lastSyncAttempt: null, syncWarnings: [], syncPartial: false, listCursor: null, listLimit: null, picture: null, name: o.account.username, bio: "", link: "" }),
   };
   return cur ? store.update("ig_connection", cur.id, userId, data) : store.insert("ig_connection", userId, data, scopedId(userId, "conn"));
 }

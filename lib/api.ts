@@ -19,9 +19,10 @@ export function route<T>(fn: (user: SessionUser, req: Request) => Promise<T>) {
 
 export async function loadCtx(userId: string): Promise<Ctx> {
   const s = getStore();
-  const business = ((await s.list("business", userId))[0] as any) ?? { voice: {} };
+  const b = (await s.list("business", userId))[0] as any;
   const p = (await s.list("persona", userId))[0] as any;
-  return { persona: (p ?? { answers: {} }) as Persona, business: business as Business, userId };
+  // o cadastro pode ter sido salvo pela metade: quem escreve conteúdo sempre recebe voz e respostas
+  return { persona: { ...p, answers: p?.answers ?? {} } as Persona, business: { ...b, voice: b?.voice ?? {} } as Business, userId };
 }
 
 export function bad(msg: string, status = 400): never {

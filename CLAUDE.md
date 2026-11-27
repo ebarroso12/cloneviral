@@ -36,10 +36,10 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 - **Cliente** chama a API com `api()` de `lib/client.ts`.
 - **Sem limite de uso**: o dono pediu em 27/11/2026 para tirar teste de 30 dias, créditos e plano (o app é só para ele). Não recriar.
 - **Conteúdo** (`lib/ai.ts`): geradores por modelo, determinísticos e sem custo. Com uma IA ligada, `llmJson(system, user, userId)` tenta a IA e cai no modelo local se falhar; roteiros guardam `generator` (`ia` ou `modelo`). Passe `userId`, ou o provedor pago do dono não é usado.
-- **Provedores de IA** (`lib/providers.ts`): catálogo de texto, vídeo e imagem, gravado pelo dono na tela `/ia` (chave cifrada); `getAi(tipo, userId)` decide. Sem nada gravado vale a variável de ambiente. Provedor novo entra no catálogo e, se o formato for outro, em `askText`, `askImage` ou `askVideo`.
+- **Provedores de IA** (`lib/providers.ts`): catálogo de texto, vídeo e imagem, gravado pelo dono na tela `/ia` (chave cifrada); `getAi(tipo, userId)` decide. Sem nada gravado vale a variável de ambiente; "Nenhum" grava um registro desligado, que vence o ambiente. Provedor novo entra no catálogo e, se o formato for outro, em `askText`, `askImage` ou `askVideo`.
 - **Agendador** (`instrumentation.ts` + `lib/scheduler.ts`): só com `RV_SCHEDULER=1` (o atalho local liga); publica o vencido a cada minuto e coleta os números uma vez por dia.
 - **Métricas** (`lib/metrics.ts`): funções puras sobre posts, snapshots e audiência. `tests/metrics.test.ts` fixa os números observados na tela original; mudança de fórmula tem de ser conferida com `replica/recon.md`. O terceiro sinal da autenticidade (comentários por curtida) é hipótese não confirmada.
-- **Instagram** (`lib/instagram.ts`): OAuth do Facebook Login + Graph API, token em AES-256-GCM com chave derivada de `RV_SECRET` (obrigatória em produção). `syncAccount` tem prazo e devolve `partial`; `syncAll` serve `/api/cron/sync`. Os testes simulam o `fetch`.
+- **Instagram** (`lib/instagram.ts`): OAuth do Facebook Login + Graph API, token em AES-256-GCM com chave derivada de `RV_SECRET` (obrigatória em produção). `syncAccount` tem prazo e devolve `partial`; conta grande retoma a lista pelo `listCursor` gravado na conexão (sem a chave); `syncAll` serve `/api/cron/sync`. Os testes simulam o `fetch`.
 - **Sessão** (`lib/auth.ts`): scrypt, cookie `rv_session`, hash do token em `sessions`.
 
 ## Regras que o código já garante (não desfazer)

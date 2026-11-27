@@ -33,14 +33,28 @@ export function applyVoice(text: string, b?: Business) {
 }
 const lc = (s?: string) => (s ?? "").replace(/[.\s]+$/, "");
 
-export async function llmJson<T>(system: string, user: string, userId?: string): Promise<T | null> {
+export type AiAnswer<T> = { on: boolean; data: T | null; error?: string };
+
+/** Como llmJson, mas diz se havia IA ligada e por que não veio resposta. */
+export async function askJson<T>(system: string, user: string, userId?: string): Promise<AiAnswer<T>> {
+  let on = false;
   try {
     const cfg = await getAi("text", userId);
-    return cfg ? readJson<T>(await askText(cfg, system, user)) : null;
+    if (!cfg) return { on, data: null };
+    on = true;
+    return { on, data: readJson<T>(await askText(cfg, system, user)) };
   } catch (e: any) {
-    console.error(`${String(e?.message ?? e).slice(0, 200)} Usei o modelo local.`);
-    return null;
+    const error = e?.name === "TimeoutError" ? "a IA demorou demais para responder" : String(e?.message ?? e).slice(0, 200);
+    console.error(error);
+    return { on, data: null, error };
   }
+}
+export const llmJson = async <T>(system: string, user: string, userId?: string) => (await askJson<T>(system, user, userId)).data;
+
+/** Para o que não tem modelo local: sem IA, pede para ligar; com IA, conta o que deu errado. */
+export function aiFailure(a: AiAnswer<unknown>, off: string): HttpError {
+  if (a.error) return new HttpError(502, `A IA não conseguiu agora (${a.error}). Tente de novo.`);
+  return a.on ? new HttpError(502, "A IA respondeu fora do formato esperado. Tente de novo.") : new HttpError(400, off);
 }
 
 /** Resumo do negócio e da persona da conta, para pedidos fora dos geradores. */
@@ -52,8 +66,9 @@ export async function loadVoice(userId: string) {
 }
 
 export function voiceBrief(c: Ctx) {
-  const v = c.business.voice;
-  return `Voz: ${v.style} Nunca usar: ${v.never}. Sempre usar: ${v.always}. CTA padrão: ${v.cta}. Cliente: ${c.persona.answers.cliente ?? ""}. Dor: ${c.persona.answers.dor ?? ""}. Desejo: ${c.persona.answers.desejo ?? ""}. Método: ${c.business.method}.`;
+  const v: Partial<Business["voice"]> = c.business.voice ?? {};
+  const a = c.persona.answers ?? {};
+  return `Voz: ${v.style ?? ""} Nunca usar: ${v.never ?? ""}. Sempre usar: ${v.always ?? ""}. CTA padrão: ${v.cta ?? ""}. Cliente: ${a.cliente ?? ""}. Dor: ${a.dor ?? ""}. Desejo: ${a.desejo ?? ""}. Método: ${c.business.method ?? ""}.`;
 }
 
 // ---------- roteiros ----------
@@ -148,13 +163,14 @@ export function patternsFromText(text: string, n: number): Pattern[] {
 export type Slide = { role: string; title: string; text: string };
 export async function genCarousel(c: Ctx, o: { theme: string; model?: CarouselModel | null; pattern?: Pattern | null; language?: string }): Promise<Slide[]> {
   const roles = o.model?.roles ?? ["capa", "problema", "virada", "passo", "passo", "resultado", "convite"];
-  const llm = await llmJson<Slide[]>(
+  const answer = await askJson<Slide[]>(
     "Você escreve textos de carrossel de Instagram em português do Brasil. Responda SOMENTE um array JSON de {role,title,text}.",
     `${voiceBrief(c)}\nTema: ${o.theme}. Slides (papéis): ${roles.join(", ")}. Idioma do texto: ${o.language ?? "pt-BR"}.`,
     c.userId,
   );
+  const llm = answer.data;
   if (llm && Array.isArray(llm) && llm.length === roles.length) return llm.map((s) => ({ ...s, title: applyVoice(s.title, c.business), text: applyVoice(s.text, c.business) }));
-  if (o.language && o.language !== "pt-BR") throw new HttpError(400, "Para escrever em outro idioma ligue uma IA em IA e integrações (ou confira se a chave está valendo).");
+  if (o.language && o.language !== "pt-BR") throw aiFailure(answer, "Para escrever em outro idioma ligue uma IA em IA e integrações.");
   const t = lc(o.theme);
   const dor = lc(c.persona.answers.dor || t).toLowerCase();
   const desejo = lc(c.persona.answers.desejo || "chegar lá").toLowerCase();

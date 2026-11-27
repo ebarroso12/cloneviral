@@ -3,7 +3,7 @@
 import { getStore, scopedId } from "./store";
 import { decrypt, gj, GRAPH, MetaError } from "./instagram";
 import { HttpError } from "./auth";
-import { llmJson, loadVoice } from "./ai";
+import { aiFailure, askJson, loadVoice } from "./ai";
 
 export type RefPost = { caption: string; likes: number | null; comments: number; type: string; permalink: string; publishedAt: string };
 export type RefProfile = { username: string; name: string; bio: string; followers: number; mediaCount: number; engagement: number | null; posts: RefPost[]; suggested: boolean; reason: string };
@@ -38,7 +38,9 @@ async function keep(userId: string, p: RefProfile) {
   const store = getStore();
   const id = scopedId(userId, `ref_${p.username.replace(/[._]/g, (c) => (c === "." ? "-p-" : "-s-"))}`);
   const cur = await store.get("ref_profiles", id);
-  return cur ? store.update("ref_profiles", id, userId, p) : store.insert("ref_profiles", userId, p, id);
+  if (!cur) return store.insert("ref_profiles", userId, p, id);
+  // perfil que o dono digitou continua sendo dele, mesmo quando a IA o sugere depois
+  return store.update("ref_profiles", id, userId, p.suggested && !cur.suggested ? { ...p, suggested: false, reason: cur.reason ?? "" } : p);
 }
 
 export async function addProfile(userId: string, username: unknown) {
@@ -55,23 +57,32 @@ export async function addProfile(userId: string, username: unknown) {
 export async function suggestProfiles(userId: string) {
   const a = await account(userId);
   const brief = await loadVoice(userId);
-  const ideas = await llmJson<{ username: string; reason: string }[]>(
+  const answer = await askJson<{ username: string; reason: string }[]>(
     "Você indica perfis profissionais do Instagram para estudo de conteúdo. Responda SOMENTE um array JSON de {username,reason}. Indique apenas perfis que você acredita existir; não invente nomes.",
     `${brief}\nIndique 15 perfis brasileiros do mesmo nicho ou de nicho vizinho.`,
     userId,
   );
-  if (!Array.isArray(ideas)) throw new HttpError(400, "A sugestão precisa de uma IA ligada em IA e integrações. Você também pode digitar o @ de um perfil.");
+  const ideas = answer.data;
+  if (!Array.isArray(ideas)) throw aiFailure(answer, "A sugestão precisa de uma IA ligada em IA e integrações. Você também pode digitar o @ de um perfil.");
   const found = [];
   let tried = 0;
+  let failure = "";
   for (const i of ideas) {
     if (found.length >= 8 || tried >= 15) break;
     tried++;
     try {
-      const u = cleanUsername(i.username);
+      const u = cleanUsername(i?.username);
       found.push(await keep(userId, { ...(await discover(a, u)), suggested: true, reason: String(i.reason ?? "").slice(0, 300) }));
     } catch (e) {
       if (e instanceof MetaError && e.code === 190) throw new HttpError(400, "A autorização do Instagram venceu. Refaça em Conexões.");
+      // 110 = "Invalid user id", a resposta da Meta para perfil inexistente (conferida em 27/11/2026); 400 e 404 são nome inválido ou perfil sem dados
+      if ((e instanceof MetaError && e.code === 110) || (e instanceof HttpError && (e.status === 400 || e.status === 404))) continue;
+      console.error(e);
+      failure = e instanceof MetaError ? `a Meta respondeu "${e.message.slice(0, 160)}"` : "falha de conexão ou do banco de dados";
+      break;
     }
   }
-  return { found: found.length, tried };
+  if (!failure) return { found: found.length, tried };
+  if (!found.length) throw new HttpError(502, `A consulta parou antes de confirmar algum perfil: ${failure}. Tente de novo mais tarde.`);
+  return { found: found.length, tried, warning: `A consulta parou antes do fim: ${failure}.` };
 }

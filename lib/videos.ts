@@ -21,6 +21,7 @@ const MB = 1024 * 1024;
 export const CHUNK = 3 * MB;
 export const SITE_MAX = 50 * MB;
 export const SITE_TOTAL = 150 * MB; // o banco gratuito é pequeno
+const STALE_MS = 10 * 60_000; // mais que o prazo máximo de uma análise
 const partId = (videoId: string, i: number) => `${videoId}-${i}`;
 
 export async function startUpload(userId: string, b: { name?: unknown; size?: unknown; duration?: unknown; width?: unknown; height?: unknown; source?: unknown }) {
@@ -33,6 +34,9 @@ export async function startUpload(userId: string, b: { name?: unknown; size?: un
   if (size > SITE_MAX) throw new HttpError(400, "No site o vídeo pode ter até 50 MB.");
   if (duration > 180) throw new HttpError(400, "O vídeo passa de 3 minutos.");
   const store = getStore();
+  // análise cortada pelo servidor não chega a apagar o arquivo: a sobra sai antes de contar o espaço
+  for (const old of await store.list("videos", userId))
+    if (old.source === "analise" && Date.now() - Date.parse(old.createdAt) > STALE_MS) await deleteVideo(userId, old.id).catch((e) => console.error(e));
   const used = (await store.list("videos", userId)).filter((v) => v.storage === "db" && !v.freed).reduce((a, v) => a + v.size, 0);
   if (used + size > SITE_TOTAL) throw new HttpError(400, "Acabou o espaço de vídeos no site (150 MB). Exclua um vídeo antigo.");
   const id = uid();

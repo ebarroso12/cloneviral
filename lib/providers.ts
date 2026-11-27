@@ -43,11 +43,18 @@ function fromEnv(kind: Kind, env: Env = process.env): AiCfg | null {
   const which = aiProvider(env);
   if (!which || kind === "image" || (which === "anthropic" && kind !== "text")) return null;
   const provider = findProvider(kind, which === "gemini" ? "gemini-gratis" : "anthropic")!;
-  const model = (which === "gemini" ? env.GEMINI_MODEL : env.ANTHROPIC_MODEL) || provider.models[0];
+  // no gratuito a variável do servidor também só vale se o modelo estiver na lista
+  const wanted = which === "gemini" ? env.GEMINI_MODEL : env.ANTHROPIC_MODEL;
+  const model = wanted && (provider.paid || provider.models.includes(wanted)) ? wanted : provider.models[0];
   return { provider, model, key: (which === "gemini" ? env.GEMINI_API_KEY : env.ANTHROPIC_API_KEY)!, account: "" };
 }
 
 const saved = (kind: Kind) => getStore().findOne("ai_settings", (d) => d.kind === kind);
+
+/** Chave guardada, ou null quando ela não abre mais (o segredo do servidor mudou). */
+function openKey(stored: string) {
+  try { return decrypt(stored); } catch (e: any) { console.error(`chave de IA ilegível: ${e?.message}`); return null; }
+}
 
 /** Qual IA usar nesta chamada. null = não há: quem chama usa o modelo local ou avisa. */
 export async function getAi(kind: Kind, userId?: string): Promise<AiCfg | null> {
@@ -57,7 +64,8 @@ export async function getAi(kind: Kind, userId?: string): Promise<AiCfg | null> 
   if (!provider || !d.key) return null;
   // chave paga gera conta para o dono: convidado não gasta
   if (provider.paid && (!d.allowPaid || !userId || userId !== d.userId)) return null;
-  return { provider, model: d.model || provider.models[0], key: decrypt(d.key), account: d.account ?? "" };
+  const key = openKey(d.key);
+  return key ? { provider, model: d.model || provider.models[0], key, account: d.account ?? "" } : null;
 }
 
 /** O que a tela pode saber: nunca a chave. */
@@ -67,7 +75,7 @@ export async function aiStatus(userId: string) {
   for (const kind of KINDS) {
     const d = await saved(kind);
     const active = await getAi(kind, userId);
-    out.push({ kind, provider: (d?.provider as string) ?? "", model: owner ? ((d?.model as string) ?? "") : "", account: owner ? ((d?.account as string) ?? "") : "", hasKey: !!d?.key, allowPaid: !!d?.allowPaid, active: active ? `${active.provider.label} · ${active.model}` : "" });
+    out.push({ kind, provider: (d?.provider as string) ?? "", model: owner ? ((d?.model as string) ?? "") : "", account: owner ? ((d?.account as string) ?? "") : "", hasKey: !!d?.key, brokenKey: !!d?.key && openKey(d.key) === null, allowPaid: !!d?.allowPaid, active: active ? `${active.provider.label} · ${active.model}` : "" });
   }
   return { owner, kinds: out };
 }
@@ -78,8 +86,10 @@ export async function saveAi(userId: string, b: Record<string, unknown>) {
   if (!KINDS.includes(kind)) throw new HttpError(400, "Tipo de IA desconhecido.");
   const store = getStore();
   const [cur] = (await store.list("ai_settings", userId)).filter((d) => d.kind === kind);
+  const write = (doc: Record<string, unknown>) => (cur ? store.update("ai_settings", cur.id, userId, doc) : store.insert("ai_settings", userId, doc, scopedId(userId, `ai_${kind}`)));
+  // "Nenhum" fica gravado: sem registro, a chave do servidor voltaria a valer
   if (!b.provider) {
-    if (cur) await store.remove("ai_settings", cur.id, userId);
+    await write({ kind, provider: "", model: "", key: "", account: "", allowPaid: false });
     return;
   }
   const provider = findProvider(kind, String(b.provider));
@@ -92,14 +102,13 @@ export async function saveAi(userId: string, b: Record<string, unknown>) {
   if (provider.paid && !allowPaid) throw new HttpError(400, "Esse provedor cobra por uso. Marque a autorização de cobrança para ligar.");
   const typed = String(b.key ?? "").trim();
   if (typed && !/^[A-Za-z0-9._-]{16,300}$/.test(typed)) throw new HttpError(400, "A chave não parece completa. Copie de novo.");
-  const sameProvider = cur?.provider === provider.id;
+  const sameProvider = cur?.provider === provider.id && !!cur.key && openKey(cur.key) !== null;
   const key = typed ? encrypt(typed) : sameProvider ? cur.key : "";
   if (!key) throw new HttpError(400, "Cole a chave desse provedor.");
   const account = String(b.account ?? "").trim();
   if (provider.needsAccount && !/^[a-f0-9]{32}$/i.test(account)) throw new HttpError(400, "Informe o ID da conta da Cloudflare (32 letras e números).");
   const doc = { kind, provider: provider.id, model, key, account: provider.needsAccount ? account : "", allowPaid: provider.paid && allowPaid };
-  if (cur) await store.update("ai_settings", cur.id, userId, doc);
-  else await store.insert("ai_settings", userId, doc, scopedId(userId, `ai_${kind}`));
+  await write(doc);
 }
 
 // ---------- chamadas ----------
@@ -165,22 +174,31 @@ export async function askImage(cfg: AiCfg, prompt: string): Promise<string> {
 const INLINE_MAX = 14 * 1024 * 1024; // em base64 fica abaixo dos 20 MB por pedido
 
 /** Manda o vídeo para o Gemini assistir: direto no pedido quando é pequeno, pela API de arquivos quando é grande. */
-export async function askVideo(cfg: AiCfg, video: Buffer, mime: string, prompt: string, pollMs = 5000): Promise<string> {
+export const VIDEO_BUDGET = 270_000; // abaixo dos 300 s da rota, para sobrar tempo de apagar o arquivo
+export const VIDEO_SLOW = "A análise demorou demais para o servidor. Tente um vídeo menor.";
+
+export async function askVideo(cfg: AiCfg, video: Buffer, mime: string, prompt: string, pollMs = 5000, deadline = Date.now() + VIDEO_BUDGET): Promise<string> {
+  // um prazo só para todas as etapas: cada pedido recebe no máximo o que ainda resta
+  const left = (cap: number) => {
+    const ms = Math.min(cap, deadline - Date.now());
+    if (ms <= 0) throw new Error(VIDEO_SLOW);
+    return ms;
+  };
   let part: Record<string, unknown>;
   if (video.length <= INLINE_MAX) part = { type: "video", data: video.toString("base64"), mime_type: mime };
   else {
-    const start = await fetch(`${GEMINI}/upload/v1beta/files`, { method: "POST", headers: { "x-goog-api-key": cfg.key, "X-Goog-Upload-Protocol": "resumable", "X-Goog-Upload-Command": "start", "X-Goog-Upload-Header-Content-Length": String(video.length), "X-Goog-Upload-Header-Content-Type": mime, "content-type": "application/json" }, body: JSON.stringify({ file: { display_name: "analise" } }), signal: AbortSignal.timeout(30000) });
+    const start = await fetch(`${GEMINI}/upload/v1beta/files`, { method: "POST", headers: { "x-goog-api-key": cfg.key, "X-Goog-Upload-Protocol": "resumable", "X-Goog-Upload-Command": "start", "X-Goog-Upload-Header-Content-Length": String(video.length), "X-Goog-Upload-Header-Content-Type": mime, "content-type": "application/json" }, body: JSON.stringify({ file: { display_name: "analise" } }), signal: AbortSignal.timeout(left(30000)) });
     const url = start.headers.get("x-goog-upload-url");
     if (!start.ok || !url) throw new Error(`A IA recusou o envio do vídeo (${start.status}).`);
-    let { file } = await call(url, { method: "POST", headers: { "X-Goog-Upload-Offset": "0", "X-Goog-Upload-Command": "upload, finalize" }, body: new Uint8Array(video) }, 120000);
+    let { file } = await call(url, { method: "POST", headers: { "X-Goog-Upload-Offset": "0", "X-Goog-Upload-Command": "upload, finalize" }, body: new Uint8Array(video) }, left(120000));
     for (let i = 0; file.state === "PROCESSING" && i < 30; i++) {
-      await new Promise((r) => setTimeout(r, pollMs));
-      file = await call(`${GEMINI}/v1beta/${file.name}`, { headers: { "x-goog-api-key": cfg.key } }, 20000);
+      await new Promise((r) => setTimeout(r, left(pollMs)));
+      file = await call(`${GEMINI}/v1beta/${file.name}`, { headers: { "x-goog-api-key": cfg.key } }, left(20000));
     }
     if (file.state && file.state !== "ACTIVE") throw new Error("A IA não conseguiu preparar o vídeo. Tente um arquivo menor.");
     part = { type: "video", uri: file.uri, mime_type: mime };
   }
-  const text = textOf(parts(await gemini(cfg.key, { model: cfg.model, input: [part, { type: "text", text: prompt }] }, 180000)));
+  const text = textOf(parts(await gemini(cfg.key, { model: cfg.model, input: [part, { type: "text", text: prompt }] }, left(180000))));
   if (!text) throw new Error("A IA não devolveu a análise.");
   return text;
 }

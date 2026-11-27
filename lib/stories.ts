@@ -1,6 +1,5 @@
 // Assistente de Stories: formatos prontos sem custo; com uma IA ligada, escreve e ajusta na sua voz.
-import { applyVoice, llmJson, voiceBrief, type Ctx } from "./ai";
-import { HttpError } from "./auth";
+import { aiFailure, applyVoice, askJson, voiceBrief, type Ctx } from "./ai";
 
 export type Frame = { role: string; text: string };
 export const FORMATS = [
@@ -34,14 +33,16 @@ function local(c: Ctx, format: Format, goal: string): Frame[] {
 
 export async function genStories(c: Ctx, o: { goal: string; format?: string; count?: number; previous?: Frame[]; instruction?: string }) {
   const format = (FORMATS.some(([k]) => k === o.format) ? o.format : "sequencia") as Format;
-  const count = COUNTS.includes(Number(o.count)) ? Number(o.count) : 5;
-  const ai = await llmJson<Frame[]>(
+  // no ajuste vale a quantidade que a sequência já tem, mesmo fora das opções de criação
+  const count = o.previous?.length || (COUNTS.includes(Number(o.count)) ? Number(o.count) : 5);
+  const answer = await askJson<Frame[]>(
     "Você escreve sequências de Stories do Instagram em português do Brasil, curtas e faladas. Responda SOMENTE um array JSON de {role,text}.",
-    `${voiceBrief(c)}\nObjetivo: ${o.goal}. Formato: ${format}. Quantidade de telas: ${count}. Não invente números, depoimentos nem promessas.${o.previous ? `\nSequência atual: ${JSON.stringify(o.previous)}. Ajuste pedido: ${o.instruction}` : ""}`,
+    `${voiceBrief(c)}\nObjetivo: ${o.goal}. Formato: ${format}. Quantidade de telas: ${count}. Não invente números, depoimentos nem promessas.${o.previous ? `\nSequência atual: ${JSON.stringify(o.previous)}. Ajuste pedido: ${o.instruction}. Mantenha ${count} telas, a não ser que o ajuste peça outra quantidade.` : ""}`,
     c.userId,
   );
+  const ai = answer.data;
   const ok = Array.isArray(ai) && ai.length > 0 && ai.every((x) => typeof x?.text === "string");
-  if (o.previous && !ok) throw new HttpError(400, "Para ajustar com um pedido seu é preciso uma IA ligada em IA e integrações.");
+  if (o.previous && !ok) throw aiFailure(answer, "Para ajustar com um pedido seu é preciso uma IA ligada em IA e integrações.");
   let frames: Frame[];
   if (ok) frames = ai!.slice(0, 10).map((x) => ({ role: String(x.role ?? "Tela").slice(0, 40), text: String(x.text).slice(0, 600) }));
   else {

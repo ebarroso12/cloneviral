@@ -174,9 +174,15 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
   // lista de posts: o que a própria listagem já informa
   const known = new Map((await store.list("posts", userId)).map((x) => [x.id, x]));
   const seen: { mediaId: string; id: string }[] = [];
-  let url: string | null = `${G}/${ig}/media?fields=id,caption,media_type,permalink,timestamp,thumbnail_url,media_url,like_count,comments_count&limit=50&access_token=${token}`;
+  let url: string | null = `${G}/${ig}/media?fields=id,caption,media_type,permalink,timestamp,thumbnail_url,media_url,like_count,comments_count&limit=${conn.listLimit || 50}&access_token=${token}`;
+  // onde a coleta anterior parou (guardado sem a chave); só entra depois de reler os posts novos
+  let resume: string | null = conn.listCursor || null;
+  let resumed = false;
+  let expired = false;
   let pages = 0;
-  while (url && pages < 300 && (pages === 0 || Date.now() < listEnd)) {
+  let resumedPages = 0;
+  let reduced = 0;
+  while (url && pages < 300 && (pages === 0 || (resumed && !resumedPages) || Date.now() < listEnd)) {
     let j: any;
     try {
       j = await gj(url);
@@ -185,14 +191,19 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
       const next: URL = new URL(url);
       const limit = Number(next.searchParams.get("limit") ?? 50);
       if (e instanceof MetaError && /reduce the amount of data/i.test(e.message) && limit > 3) {
-        next.searchParams.set("limit", String(Math.floor(limit / 2)));
+        reduced = Math.floor(limit / 2);
+        next.searchParams.set("limit", String(reduced));
         url = next.toString();
         continue;
       }
       if (!pages || (e instanceof MetaError && e.code === 190)) throw e;
       warn("Lista de posts", e); // o que já foi lido fica; o resto vem na próxima coleta
+      // ponto guardado que a Meta não aceita mais: a próxima coleta recomeça
+      expired = resumed && !resumedPages && e instanceof MetaError && e.status === 400;
       break;
     }
+    if (resumed) resumedPages++;
+    const overlaps = (j.data as any[]).some((m) => known.has(scopedId(userId, m.id)));
     // gravações em paralelo: uma por vez estourava o tempo do servidor na primeira coleta
     for (let i = 0; i < j.data.length; i += WRITES) {
       await Promise.all((j.data as any[]).slice(i, i + WRITES).map(async (m) => {
@@ -208,8 +219,21 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
     }
     url = j.paging?.next ?? null;
     pages++;
+    // a lista vem do mais novo ao mais antigo: achou post já gravado, o começo está em dia e segue de onde parou
+    if (resume && !resumed && overlaps) {
+      const to = new URL(resume);
+      to.searchParams.set("access_token", token);
+      url = to.toString();
+      resumed = true;
+    }
   }
   const listIncomplete = !!url;
+  let listCursor: string | null = null;
+  if (url && !expired) {
+    const c = new URL(url);
+    c.searchParams.delete("access_token");
+    listCursor = c.toString();
+  }
 
   // audiência
   if (!late()) {
@@ -234,7 +258,10 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
     }
   }
   // métricas por post: primeiro os nunca medidos, depois os recentes
-  const never = seen.filter((p) => !known.get(p.id)!.insightsAt).sort((a, b) => (known.get(a.id)!.insightsAttempts ?? 0) - (known.get(b.id)!.insightsAttempts ?? 0));
+  // inclui os antigos gravados em coletas anteriores, que não estão nas páginas lidas agora
+  const listed = new Set(seen.map((p) => p.id));
+  const older = [...known.keys()].filter((id) => !listed.has(id)).map((id) => ({ id, mediaId: id.slice(userId.length + 1) }));
+  const never = [...seen, ...older].filter((p) => !known.get(p.id)!.insightsAt).sort((a, b) => (known.get(a.id)!.insightsAttempts ?? 0) - (known.get(b.id)!.insightsAttempts ?? 0));
   const recent = seen.filter((p) => { const d = known.get(p.id)!; return d.insightsAt && !d.insightsUnavailable && Date.now() - Date.parse(d.publishedAt) < RECENT_DAYS * DAY; });
   const queue = [...never, ...recent];
   let done = 0;
@@ -268,7 +295,7 @@ async function runSync(userId: string, opts: { deadlineMs?: number }) {
   // anúncios: se estiverem conectados, relê o total; falha vira aviso e o número anterior fica
   if (!late()) await refreshAds(userId, token).catch((e) => warn("Anúncios", e));
   const list = [...warnings];
-  await store.update("ig_connection", conn.id, userId, { name: prof.name, igUsername: prof.username, bio: prof.biography, link: prof.website, picture: prof.profile_picture_url ?? conn.picture, lastSync: new Date().toISOString(), syncWarnings: list, syncPartial: partial });
+  await store.update("ig_connection", conn.id, userId, { name: prof.name, igUsername: prof.username, bio: prof.biography, link: prof.website, picture: prof.profile_picture_url ?? conn.picture, lastSync: new Date().toISOString(), syncWarnings: list, syncPartial: partial, listCursor, listLimit: listIncomplete ? reduced || conn.listLimit || null : null });
   return { demo: false as const, partial, warnings: list };
 }
 

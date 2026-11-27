@@ -20,7 +20,7 @@ export default function View({ rows, connected, ai }: { rows: any[]; connected: 
         <form className="row wrap" onSubmit={(e) => { e.preventDefault(); run("a", async () => { await api("/api/perfis", { body: { action: "adicionar", username: name } }); setName(""); return "Perfil adicionado."; }); }}>
           <input aria-label="Perfil do Instagram" placeholder="@perfil" value={name} onChange={(e) => setName(e.target.value)} style={{ maxWidth: 280 }} />
           <button className="btn primary" disabled={!connected || !name.trim() || !!busy}>{busy === "a" ? "Consultando..." : "Adicionar perfil"}</button>
-          <button type="button" className="btn" disabled={!connected || !ai || !!busy} onClick={() => run("s", async () => { const j = await api("/api/perfis", { body: { action: "sugerir" } }); return j.found ? `${j.found} perfis confirmados pelo Instagram.` : "Nenhuma sugestão foi confirmada pelo Instagram. Tente de novo."; })}>{busy === "s" ? "Procurando..." : "Sugerir perfis"}</button>
+          <button type="button" className="btn" disabled={!connected || !ai || !!busy} onClick={() => run("s", async () => { const j = await api("/api/perfis", { body: { action: "sugerir" } }); return j.found ? [`${j.found} perfis confirmados pelo Instagram.`, j.warning].filter(Boolean).join(" ") : "Nenhuma sugestão foi confirmada pelo Instagram. Tente de novo."; })}>{busy === "s" ? "Procurando..." : "Sugerir perfis"}</button>
         </form>
         {!ai && <p className="muted tiny">A sugestão automática precisa de uma IA de texto ligada em <Link href="/ia">IA e integrações</Link>.</p>}
       </div>

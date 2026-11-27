@@ -34,6 +34,8 @@ function Box({ owner, saved, options }: { owner: boolean; saved: any; options: P
     <section className="card" style={{ marginTop: 14 }} aria-label={TITLES[saved.kind][0]}>
       <div className="row between wrap"><h2>{TITLES[saved.kind][0]}</h2><span className={"tag " + (saved.active ? "green" : "yellow")}>{saved.active ? "Ligado: " + saved.active : "Desligado"}</span></div>
       <p className="muted small">{TITLES[saved.kind][1]}</p>
+      {owner && saved.brokenKey && <p className="small" role="alert">A chave guardada não abre mais neste servidor. Cole a chave de novo e salve.</p>}
+      {owner && saved.active && !saved.provider && <p className="small muted">Ligado pela configuração do servidor. Salvar com &quot;Nenhum&quot; desliga.</p>}
       {owner && (
         <form onSubmit={(e) => { e.preventDefault(); run("s", f, () => { toast(f.provider ? "IA gravada." : "IA desligada."); setF({ ...f, key: "" }); r.refresh(); }); }}>
           <div className="field"><label htmlFor={id("p")}>Provedor</label>
@@ -51,7 +53,7 @@ function Box({ owner, saved, options }: { owner: boolean; saved: any; options: P
                   : <select id={id("m")} value={f.model || p.models[0]} onChange={(e) => setF({ ...f, model: e.target.value })}>{p.models.map((m) => <option key={m}>{m}</option>)}</select>}
               </div>
               {p.needsAccount && <div className="field"><label htmlFor={id("a")}>ID da conta da Cloudflare</label><input id={id("a")} value={f.account} onChange={(e) => setF({ ...f, account: e.target.value })} /></div>}
-              <div className="field"><label htmlFor={id("k")}>Chave {saved.hasKey && saved.provider === f.provider && "(preencha só para trocar)"}</label><PasswordInput id={id("k")} autoComplete="off" value={f.key} onChange={(e) => setF({ ...f, key: e.target.value })} /></div>
+              <div className="field"><label htmlFor={id("k")}>Chave {saved.hasKey && !saved.brokenKey && saved.provider === f.provider && "(preencha só para trocar)"}</label><PasswordInput id={id("k")} autoComplete="off" value={f.key} onChange={(e) => setF({ ...f, key: e.target.value })} /></div>
               {p.paid && <label className="row small" style={{ marginBottom: 12 }}><input type="checkbox" style={{ width: "auto" }} checked={f.allowPaid} onChange={(e) => setF({ ...f, allowPaid: e.target.checked })} /> Autorizo a cobrança deste provedor no meu cartão.</label>}
             </>
           )}
