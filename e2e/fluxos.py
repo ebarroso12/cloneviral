@@ -520,7 +520,7 @@ def convite(browser):
     ir(dono, "conexoes")
     dono.locator("#ma").fill("123456789012")
     dono.locator("#ms").fill("0123456789abcdef0123456789abcdef")
-    dono.get_by_role("button", name="Salvar").click()
+    dono.get_by_role("button", name="Salvar", exact=True).click()
     dono.get_by_text("App da Meta gravado.").wait_for()
     ir(dono, "conexoes")
     assert dono.get_by_role("link", name="Conectar Instagram").is_visible(), "app gravado e o botão continua parado"
@@ -552,11 +552,12 @@ def olho(browser):
     vigiar(p)
     def conferir(seletor):
         campo = p.locator(seletor)
+        caixa = campo.locator("xpath=..")  # cada senha tem o seu olho; a tela pode ter mais de uma
         campo.fill("segredo-visivel-123")
         assert campo.get_attribute("type") == "password"
-        p.get_by_role("button", name="Mostrar o que foi digitado").click()
+        caixa.get_by_role("button", name="Mostrar o que foi digitado").click()
         assert campo.get_attribute("type") == "text" and campo.input_value() == "segredo-visivel-123"
-        p.get_by_role("button", name="Esconder o que foi digitado").click()
+        caixa.get_by_role("button", name="Esconder o que foi digitado").click()
         assert campo.get_attribute("type") == "password"
         assert p.url.split("?")[0].endswith(("login", "signup", "conexoes", "conta")), "o olho enviou o formulário"
     ir(p, "login")
@@ -617,6 +618,37 @@ def novidades(browser):
     p.get_by_text("IA desligada.").wait_for()
 
 
+@caso("GOOGLE dono grava o app e vê o bloco sem números; convidado não vê")
+def google(browser):
+    p = browser.new_context(locale="pt-BR", viewport={"width": 390, "height": 800}).new_page()
+    vigiar(p)
+    assert api(p, "POST", "/api/auth/login", {"email": "dono@exemplo.test", "password": "senha-de-teste-123"})[0] == 200
+    ir(p, "metricas")
+    bloco = p.get_by_role("region", name="Google")
+    bloco.get_by_text("Conecte o Google").wait_for()
+    assert bloco.get_by_text("Apareceu na busca").count() == 0, "mostra cartão sem dado"
+    ir(p, "conexoes")
+    p.locator("#gid").fill("123456-abc.apps.googleusercontent.com")
+    p.locator("#gse").fill("GOCSPX-segredo-de-teste-0123456789")
+    p.get_by_role("button", name="Salvar app").click()
+    p.get_by_text("App do Google gravado.").wait_for()
+    ir(p, "conexoes")
+    assert p.get_by_role("link", name="Conectar Google").is_visible()
+    assert "GOCSPX-segredo" not in p.content(), "a chave secreta voltou para a tela"
+    assert p.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "rolagem lateral no celular"
+    r = p.request.get(f"{BASE}/api/google/connect", max_redirects=0)
+    assert r.headers["location"].startswith("https://accounts.google.com/") and "webmasters.readonly" in r.headers["location"]
+    r = p.request.get(f"{BASE}/api/google/callback?code=x&state=falso", max_redirects=0)
+    assert "google_erro" in r.headers["location"]
+    amigo = browser.new_context(locale="pt-BR").new_page()
+    vigiar(amigo)
+    assert api(amigo, "POST", "/api/auth/login", {"email": "amigo@exemplo.test", "password": "senha-de-teste-123"})[0] == 200
+    ir(amigo, "metricas")
+    amigo.get_by_role("heading", name="Métricas").wait_for()
+    assert amigo.get_by_role("region", name="Google").count() == 0
+    assert api(amigo, "POST", "/api/google/app", {"clientId": "9-x.apps.googleusercontent.com", "secret": "x" * 30})[0] == 403
+
+
 @caso("SEG-3 senha errada em série bloqueia")
 def forca_bruta(browser):
     p = browser.new_context().new_page()
@@ -646,6 +678,7 @@ with sync_playwright() as pw:
     convite(nav)
     olho(nav)
     novidades(nav)
+    google(nav)
     excluir(nav)
     sair(pagina)
     forca_bruta(nav)

@@ -5,6 +5,7 @@ import { api } from "@/lib/client";
 import { Bar, Modal, PageHead, Sparkline, Tip, useToast } from "@/components/ui";
 import { fmtCompact, fmtDate, fmtDateTimePt, fmtDec, fmtInt, fmtPct, fmtShort, timeAgo } from "@/lib/format";
 import { TYPE_LABEL, type Post } from "@/lib/metrics";
+import GoogleBlock from "./google";
 
 type Row = { label: string; count: number; pct: number };
 type M = any;
@@ -198,6 +199,7 @@ export default function MetricasView() {
           </div>
         </Modal>
       )}
+      <GoogleBlock />
       {node}
     </>
   );
