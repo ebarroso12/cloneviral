@@ -1,9 +1,8 @@
 import { route, loadCtx, bad } from "@/lib/api";
 import { getStore } from "@/lib/store";
-import { withCharge, COSTS } from "@/lib/credits";
 import { applyVoice } from "@/lib/ai";
 
-// Sequência de stories (1 crédito): 5 telas com intenção definida, na voz do negócio.
+// Sequência de stories: 5 telas com intenção definida, na voz do negócio.
 export const POST = route(async (user, req) => {
   const b = await req.json();
   const goal = String(b.goal ?? "").trim().slice(0, 200);
@@ -18,5 +17,5 @@ export const POST = route(async (user, req) => {
     { role: "Prova", text: (ctx.business as any).proof || "Mostre aqui um resultado real ou um print de mensagem (com autorização)." },
     { role: "Convite", text: cta },
   ].map((f) => ({ ...f, text: applyVoice(f.text, ctx.business) }));
-  return withCharge(user.id, COSTS.roteiro, "Sequência de stories", () => getStore().insert("stories", user.id, { goal, frames }));
+  return getStore().insert("stories", user.id, { goal, frames });
 });

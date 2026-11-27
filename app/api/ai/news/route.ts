@@ -1,6 +1,5 @@
 import { route, loadCtx, bad } from "@/lib/api";
 import { getStore } from "@/lib/store";
-import { charge, refund, COSTS } from "@/lib/credits";
 import { newsAngle } from "@/lib/ai";
 
 function tag(xml: string, name: string) {
@@ -8,14 +7,13 @@ function tag(xml: string, name: string) {
   return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ").trim() : "";
 }
 
-// Busca pelo feed RSS público do Google Notícias. Cobra 1 crédito por busca (não por notícia).
+// Busca pelo feed RSS público do Google Notícias.
 export const POST = route(async (user, req) => {
   const b = await req.json();
   const store = getStore();
   const topics = (await store.list("news_topics", user.id)).filter((t) => t.active !== false);
   if (!topics.length) bad("Adicione um assunto em Meus assuntos para eu ter o que buscar.");
   const count = Math.min(10, Math.max(1, Number(b.count ?? 5)));
-  await charge(user.id, COSTS.noticias, "Busca de notícias");
   const ctx = await loadCtx(user.id);
   const found: any[] = [];
   try {
@@ -34,8 +32,8 @@ export const POST = route(async (user, req) => {
       }
     }
   } catch (e: any) {
-    await refund(user.id, COSTS.noticias, "Busca de notícias", "A busca não conseguiu ler o feed de notícias, e o crédito voltou para você.");
-    bad("Não consegui buscar as notícias agora. O crédito foi devolvido. Tente de novo em instantes.", 502);
+    console.error(e);
+    bad("Não consegui buscar as notícias agora. Tente de novo em instantes.", 502);
   }
   return found;
 });

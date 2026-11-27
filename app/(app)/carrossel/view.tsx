@@ -62,8 +62,8 @@ export default function CarrosselView({ list, kit, patterns, models, cats, handl
           <label className="row small"><input type="checkbox" style={{ width: "auto" }} checked={useBrand} disabled={!kit?.applied} onChange={(e) => setUseBrand(e.target.checked)} /> Usar minha identidade visual {!kit?.applied && <a href="/identidade-visual">(configurar)</a>}</label>
           <div className="chips">{[["color", "Fundo de cor"], ["photo", "Com foto na capa"]].map(([k, v]) => <button key={k} className="chip" aria-pressed={imgMode === k} onClick={() => setImgMode(k)}>{v}</button>)}</div>
         </div>
-        {imgMode === "photo" && <div className="field"><label htmlFor="foto">Foto da capa (PNG ou JPEG, sem crédito extra)</label><input id="foto" type="file" accept="image/png,image/jpeg" onChange={(e) => e.target.files?.[0] && pickPhoto(e.target.files[0])} />{photo && <span className="tiny muted">Foto pronta.</span>}</div>}
-        <button className="btn primary" onClick={go} disabled={busy || !theme.trim() || (imgMode === "photo" && !photo)}>{busy ? "Criando..." : "Criar carrossel · 2 créditos"}</button>
+        {imgMode === "photo" && <div className="field"><label htmlFor="foto">Foto da capa (PNG ou JPEG)</label><input id="foto" type="file" accept="image/png,image/jpeg" onChange={(e) => e.target.files?.[0] && pickPhoto(e.target.files[0])} />{photo && <span className="tiny muted">Foto pronta.</span>}</div>}
+        <button className="btn primary" onClick={go} disabled={busy || !theme.trim() || (imgMode === "photo" && !photo)}>{busy ? "Criando..." : "Criar carrossel"}</button>
       </div>
       <h2 style={{ margin: "22px 0 10px" }}>Seus carrosséis</h2>
       {list.length === 0 && <div className="empty">Nenhum carrossel criado.</div>}

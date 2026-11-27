@@ -17,7 +17,7 @@ export default function RoteiroView({ initial }: { initial: any[] }) {
   const [busy, setBusy] = useState(false);
   const go = async () => {
     setBusy(true);
-    try { await api("/api/ai/scripts", { body: { type, dest, theme, count, seconds: sec } }); toast(`${count === 1 ? "Roteiro criado" : count + " roteiros criados"}.`); r.refresh(); } catch (e: any) { toast(e.message, e.status === 402 ? "err" : "err"); } finally { setBusy(false); }
+    try { await api("/api/ai/scripts", { body: { type, dest, theme, count, seconds: sec } }); toast(`${count === 1 ? "Roteiro criado" : count + " roteiros criados"}.`); r.refresh(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); }
   };
   return (
     <>
@@ -30,7 +30,7 @@ export default function RoteiroView({ initial }: { initial: any[] }) {
           <div className="field"><label htmlFor="q">Quantos roteiros</label><select id="q" value={count} onChange={(e) => setCount(+e.target.value)}>{[1, 2, 3, 5].map((n) => <option key={n} value={n}>{n}</option>)}</select></div>
           <div className="field"><label htmlFor="d">Duração</label><select id="d" value={sec} onChange={(e) => setSec(+e.target.value)}>{[15, 30, 45, 60, 90].map((n) => <option key={n} value={n}>{n} segundos</option>)}</select></div>
         </div>
-        <button className="btn primary" onClick={go} disabled={busy}>{busy ? "Criando..." : `Criar roteiro · ${count} ${count === 1 ? "crédito" : "créditos"}`}</button>
+        <button className="btn primary" onClick={go} disabled={busy}>{busy ? "Criando..." : count === 1 ? "Criar roteiro" : `Criar ${count} roteiros`}</button>
       </div>
       <h2 style={{ margin: "22px 0 10px" }}>Seus roteiros</h2>
       {initial.length === 0 ? <div className="empty">Você ainda não criou nenhum roteiro.</div> : initial.map((s) => <ScriptCard key={s.id} s={s} onChange={() => r.refresh()} onToast={toast} />)}

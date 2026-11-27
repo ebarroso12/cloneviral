@@ -1,4 +1,4 @@
-// Reproduz os defeitos de isolamento, segredos e dinheiro (créditos) achados na auditoria.
+// Reproduz os defeitos de isolamento, segredos e anúncios achados na auditoria.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -13,7 +13,6 @@ delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 const mods = {
   store: () => import("../lib/store"),
   seed: () => import("../lib/seed"),
-  credits: () => import("../lib/credits"),
   config: () => import("../lib/config"),
   insta: () => import("../lib/instagram"),
 };
@@ -82,23 +81,6 @@ test("BUG-006: sem RV_SECRET o token do Instagram não é cifrado com chave púb
   }
   env.RV_SECRET = "um-segredo-de-teste-bem-longo";
   assert.equal(insta.decrypt(insta.encrypt("token")), "token");
-});
-
-test("BUG-007: duas cobranças simultâneas não deixam o saldo negativo", async () => {
-  const credits = await mods.credits();
-  await credits.grant("c1", 30, "teste");
-  const r = await Promise.allSettled([credits.charge("c1", 20, "a"), credits.charge("c1", 20, "b")]);
-  assert.equal(r.filter((x) => x.status === "fulfilled").length, 1);
-  assert.equal(await credits.balance("c1"), 10);
-});
-
-test("BUG-008: se a criação falha depois de cobrar, o crédito volta", async () => {
-  const credits = await mods.credits();
-  await credits.grant("c2", 10, "teste");
-  await assert.rejects(() => credits.withCharge("c2", 3, "Isca", async () => { throw new Error("falhou"); }), /falhou/);
-  assert.equal(await credits.balance("c2"), 10);
-  assert.equal(await credits.withCharge("c2", 3, "Isca", async () => "ok"), "ok");
-  assert.equal(await credits.balance("c2"), 7);
 });
 
 test("BUG-009: conta real nunca recebe visualizações de anúncio inventadas", async () => {

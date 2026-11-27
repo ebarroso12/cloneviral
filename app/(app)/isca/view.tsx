@@ -28,7 +28,7 @@ export default function IscaView({ baits, scripts, patterns }: any) {
         {from === "banco" && <div className="field"><label htmlFor="s">Roteiro (opcional)</label><select id="s" value={sid} onChange={(e) => setSid(e.target.value)}><option value="">Nenhum</option>{scripts.map((s: any) => <option key={s.id} value={s.id}>{s.title}</option>)}</select></div>}
         {from === "colar" && <div className="field"><label htmlFor="tx">Cole o roteiro</label><textarea id="tx" value={text} onChange={(e) => setText(e.target.value)} /></div>}
         {from === "padrao" && <div className="field"><label htmlFor="pd">Padrão da Varredura</label><select id="pd" value={pid} onChange={(e) => setPid(e.target.value)}><option value="">{patterns.length ? "Escolha um padrão" : "Rode uma Varredura primeiro"}</option>{patterns.map((x: any) => <option key={x.id} value={x.id}>{x.label}: {(x.examples?.[0] ?? "").slice(0, 60)}</option>)}</select></div>}
-        <button className="btn primary" onClick={go} disabled={busy || !kw.trim()}>{busy ? "Criando..." : "Criar isca · 3 créditos"}</button>
+        <button className="btn primary" onClick={go} disabled={busy || !kw.trim()}>{busy ? "Criando..." : "Criar isca"}</button>
       </div>
       <h2 style={{ margin: "22px 0 10px" }}>Suas iscas</h2>
       {baits.length === 0 && <div className="empty">Nenhuma isca criada.</div>}

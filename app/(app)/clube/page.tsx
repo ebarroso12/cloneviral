@@ -3,9 +3,9 @@ import { requireUser } from "@/lib/auth";
 import { PageHead } from "@/components/ui";
 export const dynamic = "force-dynamic";
 const ITEMS = [
-  ["/clube/sala-de-analise", "Sala de análise", "Análise do seu perfil com os números medidos e o que ajustar.", "2 créditos"],
-  ["/clube/raio-x", "Raio-X", "Escolha um post seu e veja por que ele foi bem ou mal.", "1 crédito"],
-  ["/clube/stories", "Stories em sequência", "Sequência de 5 stories com começo, virada e convite.", "1 crédito"],
+  ["/clube/sala-de-analise", "Sala de análise", "Análise do seu perfil com os números medidos e o que ajustar."],
+  ["/clube/raio-x", "Raio-X", "Escolha um post seu e veja por que ele foi bem ou mal."],
+  ["/clube/stories", "Stories em sequência", "Sequência de 5 stories com começo, virada e convite."],
   ["/clube/roteiros", "Roteiros do clube", "Todos os seus roteiros num lugar só, por tipo.", "Grátis"],
 ];
 export default async function Page() {

@@ -1,9 +1,8 @@
 import { route, bad } from "@/lib/api";
 import { getStore } from "@/lib/store";
-import { withCharge } from "@/lib/credits";
 import type { Post } from "@/lib/metrics";
 
-// Raio-X de um post seu (1 crédito): compara com a mediana do perfil e aponta o que explicou o resultado.
+// Raio-X de um post seu: compara com a mediana do perfil e aponta o que explicou o resultado.
 export const POST = route(async (user, req) => {
   const { postId } = await req.json();
   const s = getStore();
@@ -29,5 +28,5 @@ export const POST = route(async (user, req) => {
     hook ? `Gancho usado: "${hook}".` : "O post não tem legenda, então não há gancho escrito para avaliar.",
     /comente|salve|link|compartilhe/i.test(post.caption || "") ? "Tem chamada para ação na legenda." : "Não tem chamada para ação clara na legenda.",
   ];
-  return withCharge(user.id, 1, "Raio-X de um post", () => s.insert("xray", user.id, { postId, rows, notes }));
+  return s.insert("xray", user.id, { postId, rows, notes });
 });

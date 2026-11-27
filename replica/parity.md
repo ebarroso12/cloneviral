@@ -22,8 +22,7 @@ Not shippable yet: 4 must-have features are not done.
 - [must] métricas: Sincronização do perfil e posts (última sincronização exibida), partial  (coleta manual e diária testadas com a Meta simulada; falta conta real)
 - [must] publicar: Planejador: publicar como Reels no horário marcado, partial  (envio direto do arquivo e agendador prontos, testados só com a Meta simulada)
 - [should] criar: Carrossel: usar padrão da Varredura e idioma, partial  (padrão ok; outro idioma só com uma IA configurada)
-- [should] planejar: Varredura: reembolso quando rende menos que o previsto, partial  (estorno de entrega menor existe mas nunca é acionado pelo gerador local)
-- [could] planejar: Sugestão de perfis (12 créditos), no  (exige dados de perfis de terceiros)
+- [could] planejar: Sugestão de perfis, no  (exige dados de perfis de terceiros)
 - [could] conexões: Conectar Anúncios Meta (só leitura) para somar visualizações pagas, partial  (só na demonstração; leitura real (ads_read) não implementada)
 - [could] exclusivos: LazaStory (assistente de Stories), partial  (original visto de relance)
 - [could] exclusivos: Sala de Análise de vídeo (resposta em até 3 dias), partial  (análise automática de roteiro, arquivo de vídeo e perfil; no original é revisão humana)
@@ -33,7 +32,7 @@ Not shippable yet: 4 must-have features are not done.
 - Carrossel: imagem por IA: indisponível no original também
 - Perfil Pronto (documento entregue pela equipe): conteúdo e equipe do original; existe um Perfil Pronto próprio gerado do negócio
 - 32 roteiros prontos: conteúdo do original
-- Comprar mais créditos e gerenciar assinatura: regra do dono: sem gasto; não há assinatura. Créditos extras são livres
+- Plano, trial, créditos, extrato e estorno: retirados em 27/11/2026 a pedido do dono (uso sem limite). Os percentuais acima são anteriores a essa mudança
 
 ## Yours, not in the original (not scored)
 - CopyCut

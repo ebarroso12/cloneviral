@@ -50,15 +50,12 @@ test("Raio-X do perfil avalia seis partes com o que foi lido, sem inventar", asy
   assert.ok(good.filter((p) => p.status === "bom").length >= 4);
 });
 
-test("Ideia vira roteiro: cobra 1, grava o roteiro e move a ideia", async () => {
+test("Ideia vira roteiro: grava o roteiro e move a ideia", async () => {
   const { getStore } = await import("../lib/store");
-  const { grant, balance } = await import("../lib/credits");
   const { ideaToScript } = await import("../lib/ideas");
   const s = getStore();
-  await grant("i1", 2, "teste");
   const idea = await s.insert("ideas", "i1", { text: "mitos sobre sono", status: "ideia" });
   const script = await ideaToScript("i1", idea.id);
-  assert.equal(await balance("i1"), 1);
   assert.match(`${script.title} ${script.body}`, /mitos sobre sono/i);
   const after = await s.get("ideas", idea.id);
   assert.equal(after!.status, "roteirizando");

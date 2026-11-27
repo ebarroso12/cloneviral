@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { computeMetrics, type Post, type Snap } from "../lib/metrics";
-import { COSTS } from "../lib/credits";
 import { fmtCompact, fmtPct } from "../lib/format";
 
 // Fixture que reproduz os totais observados na tela original (2010 posts, 10.993 seguidores).
@@ -35,11 +34,6 @@ test("crescimento por período", () => {
   assert.equal(computeMetrics(posts, snaps, null, "hoje").growth.delta, 10993 - snaps[8].followers!);
   assert.equal(computeMetrics(posts, snaps, null, "30d").growth.delta, 10993 - 10966);
   assert.equal(computeMetrics(posts, snaps, null, "7d").growth.series.length, 8);
-});
-test("custos de crédito iguais ao original", () => {
-  assert.equal(COSTS.serie(7), 9);
-  assert.equal(COSTS.varredura(5), 8);
-  assert.equal(COSTS.varredura(10), 14);
 });
 test("formatação pt-BR", () => {
   assert.equal(fmtCompact(2_100_000), "2,1M");

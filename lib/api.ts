@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { apiUser, HttpError, type SessionUser } from "./auth";
-import { InsufficientCredits } from "./credits";
 import { getStore } from "./store";
 import type { Ctx, Business, Persona } from "./ai";
 
@@ -12,7 +11,6 @@ export function route<T>(fn: (user: SessionUser, req: Request) => Promise<T>) {
       return data instanceof Response ? data : NextResponse.json(data);
     } catch (e: any) {
       if (e instanceof HttpError) return NextResponse.json({ error: e.message }, { status: e.status });
-      if (e instanceof InsufficientCredits) return NextResponse.json({ error: e.message, needed: e.needed, available: e.available }, { status: 402 });
       console.error(e);
       return NextResponse.json({ error: e?.message ?? "Erro inesperado." }, { status: 500 });
     }

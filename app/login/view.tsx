@@ -20,7 +20,7 @@ export default function LoginView({ demo }: { demo: { email: string; password: s
         {err && <div className="err" role="alert">{err}</div>}
         <button className="btn primary" style={{ width: "100%" }} disabled={busy}>{busy ? "Entrando..." : "Entrar"}</button>
         {demo && <button type="button" className="btn ghost" style={{ width: "100%", marginTop: 8 }} onClick={() => { setEmail(demo.email); setPassword(demo.password); }}>Preencher conta de demonstração</button>}
-        <p className="small muted" style={{ marginTop: 14 }}>Ainda não tem conta? <Link href="/signup">Criar conta (30 créditos de teste)</Link></p>
+        <p className="small muted" style={{ marginTop: 14 }}>Ainda não tem conta? <Link href="/signup">Criar conta</Link></p>
       </form>
     </div>
   );

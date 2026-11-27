@@ -19,7 +19,7 @@ export default function SerieView({ series, scripts }: any) {
       <div className="card">
         <div className="field"><label htmlFor="t">Tema da série</label><input id="t" value={theme} onChange={(e) => setTheme(e.target.value)} placeholder="Ex.: como saí do zero e fechei meus primeiros clientes" /></div>
         <div className="field"><label>Capítulos</label><div className="chips">{[3, 5, 7, 10].map((n) => <button key={n} className="chip" aria-pressed={ch === n} onClick={() => setCh(n)}>{n}</button>)}</div></div>
-        <button className="btn primary" onClick={go} disabled={busy || !theme.trim()}>{busy ? "Escrevendo..." : `Criar série · ${2 + ch} créditos`}</button>
+        <button className="btn primary" onClick={go} disabled={busy || !theme.trim()}>{busy ? "Escrevendo..." : "Criar série"}</button>
       </div>
       {series.map((se: any) => (
         <div key={se.id} style={{ marginTop: 22 }}>

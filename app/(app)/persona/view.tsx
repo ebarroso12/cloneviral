@@ -36,7 +36,7 @@ export default function PersonaView({ initial }: { initial: any }) {
         {Q.map(([k, label, hint]) => (
           <div className="field" key={k}><label htmlFor={k}>{label} <span className="dim">· {hint}</span></label><textarea id={k} value={a[k] ?? ""} onChange={(e) => setA({ ...a, [k]: e.target.value })} /></div>
         ))}
-        <div className="row"><button className="btn primary" onClick={gen} disabled={busy}>{busy ? "Criando..." : initial ? "Criar uma nova persona · 8 créditos" : "Criar persona · 8 créditos"}</button><span className="muted small">As respostas ficam salvas ao criar.</span></div>
+        <div className="row"><button className="btn primary" onClick={gen} disabled={busy}>{busy ? "Criando..." : initial ? "Criar uma nova persona" : "Criar persona"}</button><span className="muted small">As respostas ficam salvas ao criar.</span></div>
       </div>
       {doc && <div className="card" style={{ marginTop: 14 }}><h3>Persona criada</h3><div className="muted tiny" style={{ marginBottom: 8 }}>{doc.length.toLocaleString("pt-BR")} caracteres</div><pre style={{ whiteSpace: "pre-wrap", font: "inherit", margin: 0 }}>{doc}</pre></div>}
       {node}

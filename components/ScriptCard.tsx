@@ -16,7 +16,7 @@ export function ScriptCard({ s, onChange, onToast }: { s: any; onChange: () => v
   const copy = async () => { try { await navigator.clipboard.writeText(fullText(s)); onToast("Roteiro copiado."); } catch { onToast("Não consegui copiar. Selecione o texto e copie.", "err"); } };
   const del = async () => { if (!confirm("Excluir este roteiro?")) return; try { await api(`/api/c/scripts?id=${s.id}`, { method: "DELETE" }); onChange(); } catch (e: any) { onToast(e.message, "err"); } };
   const regen = async () => {
-    try { await api("/api/ai/scripts", { body: { type: s.type, dest: s.dest, theme: s.title, seconds: s.seconds, replaceId: s.id } }); onToast("Roteiro refeito. Custou 1 crédito."); onChange(); } catch (e: any) { onToast(e.message, "err"); }
+    try { await api("/api/ai/scripts", { body: { type: s.type, dest: s.dest, theme: s.title, seconds: s.seconds, replaceId: s.id } }); onToast("Roteiro refeito."); onChange(); } catch (e: any) { onToast(e.message, "err"); }
   };
   const save = async () => { await patch({ title: d.title, hook: d.hook, body: d.body, cta: d.cta }); setEdit(false); onToast("Roteiro salvo."); };
   return (
@@ -30,7 +30,7 @@ export function ScriptCard({ s, onChange, onToast }: { s: any; onChange: () => v
           <button className="btn sm" onClick={() => setTele(true)}>Teleprompter</button>
           <button className="btn sm" onClick={() => patch({ recorded: !s.recorded })}>{s.recorded ? "Desmarcar gravado" : "Já gravei"}</button>
           <a className="btn sm" href={`/api/pdf/script/${s.id}`} target="_blank" rel="noreferrer">PDF</a>
-          <button className="btn sm" onClick={regen}>Regenerar · 1 crédito</button>
+          <button className="btn sm" onClick={regen}>Regenerar</button>
           <button className="btn sm danger" onClick={del}>Excluir</button>
         </div>
       </div>

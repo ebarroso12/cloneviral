@@ -1,6 +1,6 @@
 feature,area,priority,original,clone,notes
 Menu lateral em 4 fases numeradas + Exclusivos,navegação,must,yes,yes,vira dialog no mobile
-Menu da conta (perfil; trial e créditos; Meu plano; Sair),conta,must,yes,yes,
+Menu da conta (perfil; Minha conta; Sair),conta,must,yes,yes,sem plano nem créditos
 Login e cadastro por e-mail,conta,must,yes,yes,original não testado: só vi sessão ativa
 Conectar Instagram via OAuth Meta (conta profissional),conexões,must,yes,partial,código pronto; nunca testado com app Meta e conta real
 Renovar autorização / trocar Página sem apagar histórico,conexões,must,yes,partial,nunca testado com conta real
@@ -43,21 +43,21 @@ Varredura: destino (Reel/Criativo) e tipo (Viral/Emocional/Técnico),planejar,mu
 Varredura: quantos analisar/gerar e duração,planejar,must,yes,yes,
 Varredura: tema opcional que sobrepõe o assunto,planejar,should,yes,yes,
 Varredura: lista de varreduras e padrões salvos,planejar,must,yes,yes,
-Varredura: reembolso quando rende menos que o previsto,planejar,should,yes,partial,estorno de entrega menor existe mas nunca é acionado pelo gerador local
+Varredura: reembolso quando rende menos que o previsto,planejar,should,yes,skip,"retirado junto com os créditos em 27/11/2026"
 Sugestão de perfis (12 créditos),planejar,could,yes,no,exige dados de perfis de terceiros
 Notícias: assuntos + Buscar agora + artigo pronto,planejar,should,yes,yes,busca no feed real testada; o texto de ângulo é modelo curto sem IA
 Ideias: kanban 4 colunas com arrastar,planejar,must,yes,yes,
 Ideia vira roteiro,planejar,should,yes,yes,
-Roteiro: cartão com tipo/destino/duração/gancho,criar,must,yes,yes,1 crédito
+Roteiro: cartão com tipo/destino/duração/gancho,criar,must,yes,yes,
 Roteiro: Abrir/Editar/Copiar/Teleprompter/Já gravei/PDF/Regenerar/Excluir,criar,must,yes,yes,
-Carrossel: escrever slides; aprovar; depois desenhar 1080x1440,criar,must,yes,yes,2 créditos
+Carrossel: escrever slides; aprovar; depois desenhar 1080x1440,criar,must,yes,yes,
 Carrossel: usar padrão da Varredura e idioma,criar,should,yes,partial,padrão ok; outro idioma só com uma IA configurada
 Carrossel: 100 modelos em 13 categorias,criar,must,yes,yes,criar catálogo próprio
 Carrossel: foto própria na capa (PNG/JPEG) sem custo,criar,should,yes,yes,
 Carrossel: imagem por IA,criar,could,yes,skip,indisponível no original também
 Carrossel: lista de carrosséis salvos,criar,must,yes,yes,
 Série: tema em N capítulos (2 + 1 por capítulo),criar,must,yes,yes,
-Isca de Alto Valor: colar/banco/padrão + palavra-chave + PDF,criar,must,yes,yes,3 créditos; entrega no direct fica fora
+Isca de Alto Valor: colar/banco/padrão + palavra-chave + PDF,criar,must,yes,yes,entrega no direct fica fora
 CopyCut,criar,could,no,skip,Em breve no original
 Planejador: calendário mensal com agendamentos,publicar,must,yes,yes,
 Planejador: linha editorial (Viral/Emocional/Técnico por mês),publicar,must,yes,yes,
@@ -69,7 +69,7 @@ Sala de Análise de vídeo (resposta em até 3 dias),exclusivos,could,yes,partia
 Raio-X do Perfil (6 partes),exclusivos,could,yes,yes,foto e destaques ficam como conferir: o app não avalia imagem
 LazaStory (assistente de Stories),exclusivos,could,yes,partial,original visto de relance
 32 roteiros prontos,exclusivos,could,yes,skip,conteúdo do original
-Meu plano: cota; custos; extrato (cobrado/devolvido/usado),plano,must,yes,yes,
-Trial 30 dias com 30 créditos; START 100 créditos/mês,plano,must,yes,yes,"30 créditos no teste e depois 100 por mês, sem cobrança"
-Comprar mais créditos e gerenciar assinatura,plano,must,yes,skip,regra do dono: sem gasto; não há assinatura. Créditos extras são livres
-Débito de crédito na criação e estorno parcial,plano,must,yes,yes,ledger imutável
+Meu plano: cota; custos; extrato (cobrado/devolvido/usado),plano,must,yes,skip,"retirado em 27/11/2026 a pedido do dono: uso sem limite"
+Trial 30 dias com 30 créditos; START 100 créditos/mês,plano,must,yes,skip,"retirado em 27/11/2026 a pedido do dono: uso sem limite"
+Comprar mais créditos e gerenciar assinatura,plano,must,yes,skip,"retirado em 27/11/2026 a pedido do dono: uso sem limite"
+Débito de crédito na criação e estorno parcial,plano,must,yes,skip,"retirado em 27/11/2026 a pedido do dono: uso sem limite"

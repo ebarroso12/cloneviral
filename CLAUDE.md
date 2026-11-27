@@ -32,9 +32,9 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 
 - **Dados** (`lib/store.ts`): uma interface `Store` de documentos por coleção, com `FileStore` (`data/db.json`, gravação atrasada em 150 ms) e `SupabaseStore` (tabela única `app_docs`, via PostgREST com service role). Escolha por `supabaseConfig` (`SUPABASE_URL` + service role, ou chave pública + `RV_DB_KEY`). Não há schema por entidade: o modelo de dados está descrito em `replica/recon.md`. Qualquer mudança na interface vale para as duas implementações.
 - **Escopo por usuário** é responsabilidade do código: a política da migração 0002 só confere o segredo do servidor (ou usa-se service role). `get()` e `findOne()` não filtram usuário, então quem chama precisa comparar `userId`.
-- **API**: handlers usam `route()` de `lib/api.ts` (autentica e converte `HttpError` e `InsufficientCredits` em 401/4xx/402). CRUD simples passa por `app/api/c/[collection]`, que só aceita as listas `WRITABLE` e `READONLY`: coleção nova precisa entrar nelas.
+- **API**: handlers usam `route()` de `lib/api.ts` (autentica e converte `HttpError` em 401/4xx). CRUD simples passa por `app/api/c/[collection]`, que só aceita as listas `WRITABLE` e `READONLY`: coleção nova precisa entrar nelas.
 - **Cliente** chama a API com `api()` de `lib/client.ts`.
-- **Créditos** (`lib/credits.ts`): livro-razão `ledger`; saldo é a soma das linhas. Cobrar antes de gerar (`charge`) e devolver a diferença (`refund`) se render menos. Os custos em `COSTS` reproduzem o original e há teste sobre eles.
+- **Sem limite de uso**: o dono pediu em 27/11/2026 para tirar teste de 30 dias, créditos e plano (o app é só para ele). Não recriar.
 - **Conteúdo** (`lib/ai.ts`): geradores por modelo, determinísticos e sem custo. Com `GEMINI_API_KEY` (plano gratuito), `llmJson` tenta a IA e cai no modelo local se falhar; roteiros guardam `generator` (`ia` ou `modelo`).
 - **Agendador** (`instrumentation.ts` + `lib/scheduler.ts`): só com `RV_SCHEDULER=1` (o atalho local liga); publica o vencido a cada minuto e coleta os números uma vez por dia.
 - **Métricas** (`lib/metrics.ts`): funções puras sobre posts, snapshots e audiência. `tests/metrics.test.ts` fixa os números observados na tela original; mudança de fórmula tem de ser conferida com `replica/recon.md`. O terceiro sinal da autenticidade (comentários por curtida) é hipótese não confirmada.
@@ -52,7 +52,6 @@ Next.js 15 (App Router) + React 19 + TypeScript estrito, CSS próprio em `app/gl
 - Chave fixa (`conn`, `aud`, `snap_<data>`, id de post da Meta) vira `scopedId(userId, chave)`. `insert` recusa id de outra conta.
 - Corpo vindo do navegador passa por `clientData`; documento que sai para o navegador passa por `publicDoc` (remove `token`).
 - `videos` é só leitura na API genérica; caminho de arquivo sai de `videoPath`.
-- Geração paga usa `withCharge` (devolve o crédito se falhar). Nunca `charge` solto numa rota.
 - `findAll` atravessa contas: só para a coleta diária.
 - Métrica que a Meta não devolveu não é gravada como zero, e a falha vira aviso em `syncWarnings`.
 - Número estimado nunca aparece como medido (anúncios simulados só na demo).

@@ -19,12 +19,12 @@ export default function View({ posts, rows }: any) {
       <div className="card" style={{ marginBottom: 14 }}>
         <h2>Raio-X do perfil</h2>
         <div className="field"><label htmlFor="hl">Seus destaques, separados por vírgula (a API do Instagram não os entrega)</label><input id="hl" value={highlights} onChange={(e) => setHighlights(e.target.value)} /></div>
-        <button className="btn primary" onClick={profile} disabled={busy}>{busy ? "Lendo..." : "Raio-X do perfil · 2 créditos"}</button>
+        <button className="btn primary" onClick={profile} disabled={busy}>{busy ? "Lendo..." : "Raio-X do perfil"}</button>
       </div>
       <h2>Raio-X de um post</h2>
       <div className="card">
         <div className="field"><label htmlFor="p">Post</label><select id="p" value={id} onChange={(e) => setId(e.target.value)}>{posts.map((p: any) => <option key={p.id} value={p.id}>{fmtShort(p.publishedAt)} · {(p.caption || "(sem legenda)").slice(0, 60)}</option>)}</select></div>
-        <button className="btn primary" onClick={go} disabled={busy || !id}>{busy ? "Analisando..." : "Fazer raio-x · 1 crédito"}</button>
+        <button className="btn primary" onClick={go} disabled={busy || !id}>{busy ? "Analisando..." : "Fazer raio-x"}</button>
       </div>
       {rows.map((x: any) => x.kind === "perfil" ? (
         <div key={x.id} className="card" style={{ marginTop: 14 }}>

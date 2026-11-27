@@ -21,7 +21,7 @@ os.makedirs(SHOTS, exist_ok=True)
 ROTAS = ["metricas", "conexoes", "persona", "meu-negocio", "identidade-visual", "varredura", "noticias", "ideias",
          "roteiro", "carrossel", "serie", "isca", "planejador-editorial", "meu-perfil-pronto", "clube",
          "clube/sala-de-analise", "clube/raio-x", "clube/stories",
-         "clube/roteiros", "meu-plano"]
+         "clube/roteiros", "conta"]
 
 resultados = []
 problemas = []
@@ -58,20 +58,16 @@ def api(page, metodo, rota, corpo=None):
         return r.status, r.body()
 
 
-def saldo(page):
-    return api(page, "GET", "/api/credits")[1]["available"]
-
-
 def ir(page, rota):
     page.goto(f"{BASE}/{rota}", wait_until="networkidle")
 
 
 @caso("SEG-2 API sem sessão devolve 401")
 def sem_sessao(page):
-    for rota in ["/api/metrics", "/api/credits", "/api/c/posts", "/api/c/ig_connection", "/api/upload?id=x", "/api/pdf/script/x"]:
+    for rota in ["/api/metrics", "/api/c/posts", "/api/c/ig_connection", "/api/upload?id=x", "/api/pdf/script/x"]:
         s, _ = api(page, "GET", rota)
         assert s == 401, f"{rota} devolveu {s}"
-    for rota in ["/api/ai/scripts", "/api/ads", "/api/credits", "/api/ig/sync"]:
+    for rota in ["/api/ai/scripts", "/api/ads", "/api/ig/sync"]:
         s, _ = api(page, "POST", rota, {})
         assert s == 401, f"POST {rota} devolveu {s}"
 
@@ -137,7 +133,7 @@ def conectar(page):
 def configurar(page):
     ir(page, "persona")
     page.locator("#cliente").fill("Dentistas que querem agenda cheia 🦷 com ação e coração")
-    page.get_by_role("button", name=re.compile("persona · 8 créditos")).click()
+    page.get_by_role("button", name=re.compile("^Criar .*persona$")).click()
     page.get_by_text("Persona criada.").wait_for()
     ir(page, "persona")
     assert "🦷" in page.locator("#cliente").input_value()
@@ -163,34 +159,33 @@ def configurar(page):
     assert page.locator("#n").input_value() == "Ágata"
 
 
-@caso("F03-H1 varredura de 5 roteiros cobra 8")
+@caso("F03-H1 varredura entrega 5 roteiros")
 def varredura(page):
-    antes = saldo(page)
+    antes = len(api(page, "GET", "/api/c/scripts")[1])
     ir(page, "varredura")
-    page.get_by_role("button", name="Iniciar varredura · 8 créditos").click()
+    page.get_by_role("button", name="Iniciar varredura").click()
     page.get_by_text("Varredura pronta.").wait_for(timeout=60000)
-    assert antes - saldo(page) == 8, f"cobrou {antes - saldo(page)}"
+    assert len(api(page, "GET", "/api/c/scripts")[1]) - antes == 5
 
 
 @caso("F03-N1 varredura sem tipo é recusada")
 def sem_tipo(page):
-    antes = saldo(page)
     s, _ = api(page, "POST", "/api/ai/varredura", {"types": []})
-    assert s == 400 and saldo(page) == antes
+    assert s == 400
 
 
 @caso("F04-H1 roteiro, PDF e F04-E1 regenerar sem cópia")
 def roteiro(page):
     ir(page, "roteiro")
     page.locator("#tema").fill("agenda cheia")
-    page.get_by_role("button", name="Criar roteiro · 1 crédito").click()
+    page.get_by_role("button", name="Criar roteiro").click()
     page.get_by_text("Roteiro criado.", exact=True).wait_for()
     lista = api(page, "GET", "/api/c/scripts")[1]
     n = len(lista)
     r = page.request.get(f"{BASE}/api/pdf/script/{lista[0]['id']}")
     assert r.status == 200 and r.body()[:4] == b"%PDF", f"PDF {r.status}"
     ir(page, "roteiro")
-    page.get_by_role("button", name="Regenerar · 1 crédito").first.click()
+    page.get_by_role("button", name="Regenerar", exact=True).first.click()
     page.get_by_text("Roteiro refeito.").wait_for()
     assert len(api(page, "GET", "/api/c/scripts")[1]) == n, "regenerar criou cópia"
 
@@ -199,7 +194,7 @@ def roteiro(page):
 def carrossel(page):
     ir(page, "carrossel")
     page.locator("#t").fill("3 erros na agenda")
-    page.get_by_role("button", name="Criar carrossel · 2 créditos").click()
+    page.get_by_role("button", name="Criar carrossel").click()
     page.get_by_text("Carrossel criado.", exact=True).wait_for()
     page.get_by_role("button", name="Aprovar").first.click()
     page.get_by_text("Aprovado").first.wait_for()
@@ -220,7 +215,7 @@ def capa(page):
     page.get_by_role("button", name="Com foto na capa").click()
     page.locator("#foto").set_input_files({"name": "f.png", "mimeType": "image/png", "buffer": base64.b64decode(png)})
     page.get_by_text("Foto pronta.").wait_for()
-    page.get_by_role("button", name="Criar carrossel · 2 créditos").click()
+    page.get_by_role("button", name="Criar carrossel").click()
     page.get_by_text("Carrossel criado.", exact=True).wait_for()
     page.locator("svg image").first.wait_for(state="attached")
     with page.expect_download() as d:
@@ -232,47 +227,33 @@ def capa(page):
 def isca(page):
     ir(page, "isca")
     page.locator("#k").fill("AGENDA")
-    page.get_by_role("button", name="Criar isca · 3 créditos").click()
+    page.get_by_role("button", name="Criar isca").click()
     page.get_by_text("Isca criada.", exact=True).wait_for()
     i = api(page, "GET", "/api/c/lead_magnets")[1][0]
     assert page.request.get(f"{BASE}/api/pdf/isca/{i['id']}").body()[:4] == b"%PDF"
 
 
-@caso("F04-E2 saldo nunca negativo com pedidos simultâneos")
-def simultaneo(page):
-    antes = saldo(page)
-    n = antes + 3
-    page.evaluate("""async (n) => { await Promise.all(Array.from({length: n}, () =>
-        fetch('/api/ai/scripts', {method: 'POST', headers: {'content-type': 'application/json'}, body: '{"type":"viral"}'}))) }""", n)
-    assert saldo(page) == 0, f"saldo {saldo(page)}"
+@caso("F06-H1 uso sem limite: passa dos 30 e nada fala em crédito")
+def sem_limite(page):
+    antes = len(api(page, "GET", "/api/c/scripts")[1])
+    for _ in range(4):
+        s, _ = api(page, "POST", "/api/ai/scripts", {"type": "viral", "count": 10})
+        assert s == 200, f"status {s}"
+    assert len(api(page, "GET", "/api/c/scripts")[1]) - antes == 40
+    for rota in ["metricas", "roteiro", "varredura", "conta"]:
+        ir(page, rota)
+        texto = page.locator("body").inner_text().lower()
+        assert "crédito" not in texto.replace("não há plano, prazo nem créditos", ""), rota
+    assert api(page, "GET", "/api/credits")[0] == 404
 
 
-@caso("F03-N2 sem saldo: 402 e nada preso em rodando")
-def sem_saldo(page):
-    s, _ = api(page, "POST", "/api/ai/varredura", {"types": ["viral"], "scripts": 5})
-    assert s == 402, f"status {s}"
-    assert all(x["status"] != "rodando" for x in api(page, "GET", "/api/c/sweeps")[1])
-
-
-@caso("F06-H1 extrato bate com o saldo e mais créditos funciona")
-def plano(page):
-    s = api(page, "GET", "/api/credits")[1]
-    assert sum(r["amount"] for r in s["rows"]) == s["available"]
-    ir(page, "meu-plano")
-    page.get_by_role("button", name="Quero mais créditos").click()
-    page.get_by_text("Mais 20 créditos, sem custo.", exact=True).wait_for()
-    assert saldo(page) == s["available"] + 20
-
-
-@caso("F04-H1 série de 3 capítulos cobra 5")
+@caso("F04-H1 série de 3 capítulos")
 def serie(page):
-    antes = saldo(page)
     ir(page, "serie")
     page.locator("#t").fill("do zero à agenda cheia")
     page.get_by_role("button", name="3", exact=True).click()
-    page.get_by_role("button", name="Criar série · 5 créditos").click()
+    page.get_by_role("button", name="Criar série").click()
     page.get_by_text("Série criada.").wait_for()
-    assert antes - saldo(page) == 5
 
 
 @caso("F07-H1 sala de análise, raio-x e stories")
@@ -285,18 +266,18 @@ def circulo(page):
     page.locator("#av").set_input_files({"name": "a.mp4", "mimeType": "video/mp4", "buffer": b"0" * 1024})
     page.get_by_text("Não consegui ler as dimensões.").wait_for()
     page.get_by_role("button", name="Perfil", exact=True).click()
-    page.get_by_role("button", name="Analisar meu perfil · 2 créditos").click()
+    page.get_by_role("button", name="Analisar meu perfil").click()
     page.get_by_text("Análise pronta.", exact=True).wait_for()
     ir(page, "clube/raio-x")
-    page.get_by_role("button", name="Fazer raio-x · 1 crédito").click()
+    page.get_by_role("button", name="Fazer raio-x").click()
     page.get_by_text("Raio-X pronto.", exact=True).wait_for()
     ir(page, "clube/raio-x")
-    page.get_by_role("button", name="Raio-X do perfil · 2 créditos").click()
+    page.get_by_role("button", name="Raio-X do perfil").click()
     page.get_by_text("Raio-X do perfil pronto.").wait_for()
     page.get_by_text("Destaques", exact=True).last.wait_for()
     ir(page, "clube/stories")
     page.locator("#g").fill("convidar para a avaliação")
-    page.get_by_role("button", name="Criar sequência · 1 crédito").click()
+    page.get_by_role("button", name="Criar sequência").click()
     page.get_by_text("Sequência criada.").wait_for()
 
 
@@ -309,7 +290,7 @@ def planejar(page):
     page.get_by_role("button", name="Mover para a próxima coluna").first.click()
     page.wait_for_timeout(500)
     assert api(page, "GET", "/api/c/ideas")[1][0]["status"] == "roteirizando"
-    page.get_by_role("button", name="Virar roteiro · 1 crédito").first.click()
+    page.get_by_role("button", name="Virar roteiro").first.click()
     page.get_by_role("link", name="Ver o roteiro").first.wait_for()
     ir(page, "planejador-editorial")
     page.locator(".cal button.today").click()
@@ -419,7 +400,7 @@ def isca_colada(page):
     page.get_by_role("button", name="Colar um roteiro").click()
     page.locator("#tx").fill("roteiro colado sobre sono reparador")
     page.locator("#k").fill("SONO")
-    page.get_by_role("button", name="Criar isca · 3 créditos").click()
+    page.get_by_role("button", name="Criar isca").click()
     page.get_by_text("Isca criada.", exact=True).wait_for()
     assert "sono reparador" in json.dumps(api(page, "GET", "/api/c/lead_magnets")[1], ensure_ascii=False)
     ir(page, "planejador-editorial")
@@ -441,7 +422,7 @@ def sair(page):
     page.get_by_role("button", name=re.compile("^Conta:")).click()
     perfil = page.get_by_role("menuitem", name="Ver o meu perfil")
     assert perfil.count() == 0 or perfil.get_attribute("href").startswith("https://www.instagram.com/")
-    for t in ["Meu plano", "Sair"]:
+    for t in ["Minha conta", "Sair"]:
         page.get_by_role("menuitem", name=t, exact=True).wait_for()
     page.get_by_role("menuitem", name="Sair").click()
     page.wait_for_url("**/login")
@@ -450,14 +431,12 @@ def sair(page):
 
 @caso("S06 varredura com texto colado (um perfil)")
 def varredura_colada(page):
-    antes = saldo(page)
     ir(page, "varredura")
     page.get_by_role("button", name="Um perfil").click()
     assert page.get_by_role("button", name=re.compile("^Iniciar varredura")).is_disabled()
     page.locator("#sample").fill("Você acorda cansado?\nSalve este post.\n\n3 sinais de alerta.")
     page.get_by_role("button", name=re.compile("^Iniciar varredura")).click()
     page.get_by_text("Varredura pronta.", exact=True).wait_for(timeout=60000)
-    assert antes - saldo(page) == 8
     textos = json.dumps(api(page, "GET", "/api/c/scripts")[1], ensure_ascii=False)
     assert "acorda cansado" not in textos.lower(), "copiou a frase de terceiro como assunto"
 
@@ -468,7 +447,7 @@ def noticias(page):
     page.get_by_label("Novo assunto").fill("qualidade do sono")
     page.get_by_role("button", name="Adicionar").click()
     page.get_by_role("button", name="Remover qualidade do sono").wait_for()
-    page.get_by_role("button", name="Buscar agora · 1 crédito").click()
+    page.get_by_role("button", name="Buscar agora").click()
     page.get_by_role("link", name="Ler a notícia").first.wait_for(timeout=45000)
     n = api(page, "GET", "/api/c/news_items")[1]
     assert n and n[0]["title"] and n[0]["link"].startswith("https://"), n[:1]
@@ -497,7 +476,7 @@ def excluir(browser):
     vigiar(p)
     assert api(p, "POST", "/api/auth/login", {"email": "dono@exemplo.test", "password": "senha-de-teste-123"})[0] == 200
     api(p, "POST", "/api/c/ideas", {"text": "some com a conta"})
-    ir(p, "meu-plano")
+    ir(p, "conta")
     p.get_by_label("Sua senha para excluir").fill("errada-errada")
     p.get_by_role("button", name="Excluir a conta").click()
     p.get_by_text("Senha incorreta").wait_for()
@@ -585,14 +564,10 @@ with sync_playwright() as pw:
     sem_sessao(pagina)
     problemas.clear()  # os 401 acima são esperados
     for f in [entrar, periodo, top12, ajuda, anuncios, conectar, configurar, varredura, sem_tipo, roteiro, carrossel, capa, isca,
-              simultaneo, sem_saldo, plano]:
+              sem_limite]:
         f(pagina)
-    for _ in range(3):  # créditos para os casos seguintes
-        api(pagina, "POST", "/api/credits", {})
     for f in [serie, circulo, planejar, video, telas, movel]:
         f(pagina)
-    for _ in range(2):
-        api(pagina, "POST", "/api/credits", {})
     for f in [acoes_roteiro, arrastar, catalogo, isca_colada, varredura_colada, noticias, auto]:
         f(pagina)
     isolamento(nav, pagina)
@@ -604,7 +579,7 @@ with sync_playwright() as pw:
     nav.close()
 
 falhas = [r for r in resultados if r[1] != "passou"]
-# 400, 401, 402 e 404 provocados de propósito aparecem no console do navegador
+# 400, 401 e 404 provocados de propósito aparecem no console do navegador
 reais = [p for p in problemas if not re.search(r"status of 40[0-4]", p)]
 print(f"\n{len(resultados) - len(falhas)} passaram, {len(falhas)} falharam, {len(reais)} erros de console ou 5xx")
 for p in sorted(set(reais))[:30]:

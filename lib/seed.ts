@@ -16,10 +16,6 @@ function mulberry32(seed: number) {
   };
 }
 
-export async function grantTrial(userId: string) {
-  await getStore().insert("ledger", userId, { at: new Date().toISOString(), kind: "grant", amount: 30, label: "Trial de 30 dias" });
-}
-
 let seeding: Promise<void> | null = null;
 export function ensureSeed() {
   if (!demoEnabled()) return Promise.resolve();
@@ -127,8 +123,7 @@ async function doSeed() {
   const existing = await store.findOne("users", (u) => u.email === DEMO_EMAIL);
   if (existing) return;
   const id = uid();
-  await store.insert("users", id, { name: "Marina Costa", email: DEMO_EMAIL, password: hashPassword(DEMO_PASSWORD), plan: "trial", trialEndsAt: new Date(Date.now() + 30 * 86400000).toISOString(), demo: true }, id);
-  await grantTrial(id);
+  await store.insert("users", id, { name: "Marina Costa", email: DEMO_EMAIL, password: hashPassword(DEMO_PASSWORD), demo: true }, id);
   await seedAccount(id);
   flushStore();
 }

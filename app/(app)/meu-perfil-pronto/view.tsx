@@ -26,7 +26,7 @@ export default function PerfilView({ business: b, persona: p, conn }: any) {
   if (!kit) return <><PageHead title="Meu perfil pronto" /><div className="empty">Preencha <a href="/meu-negocio">Meu Negócio</a> primeiro: o perfil é montado em cima dele.</div></>;
   return (
     <>
-      <PageHead title="Meu perfil pronto" desc="Bio, destaques e posts fixados montados a partir do seu negócio e da sua persona. Gratuito: não gasta crédito." />
+      <PageHead title="Meu perfil pronto" desc="Bio, destaques e posts fixados montados a partir do seu negócio e da sua persona." />
       <div className="card" style={{ marginBottom: 14 }}><h2>Sugestões de bio</h2>{kit.bios.map((t: string, i: number) => <div key={i} className="row between" style={{ margin: "10px 0", alignItems: "flex-start" }}><div style={{ whiteSpace: "pre-line" }}>{t}<div className="muted tiny">{t.length}/150</div></div><button className="btn sm" onClick={() => copy(t)}>Copiar</button></div>)}</div>
       <div className="grid g2">
         <div className="card"><h2>Destaques</h2><div className="chips" style={{ marginTop: 10 }}>{kit.highlights.map((h: string) => <span key={h} className="tag">{h}</span>)}</div></div>

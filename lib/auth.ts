@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getStore, uid, type Doc } from "./store";
-import { ensureSeed, grantTrial } from "./seed";
+import { ensureSeed } from "./seed";
 import { signupAllowed, demoEnabled } from "./config";
 import { hashPassword, verifyPassword } from "./password";
 import { claimInvite } from "./invites";
@@ -25,9 +25,7 @@ export async function signup(name: string, email: string, password: string, code
   // o convite só é gasto depois que o resto foi conferido
   if (!open && !(await claimInvite(code))) throw new Error("Convite inválido, já usado ou vencido.");
   const id = uid();
-  const trialEnds = new Date(Date.now() + 30 * 86400000).toISOString();
-  await store.insert("users", id, { name: name.trim() || email.split("@")[0], email, password: hashPassword(password), plan: "trial", trialEndsAt: trialEnds }, id);
-  await grantTrial(id);
+  await store.insert("users", id, { name: name.trim() || email.split("@")[0], email, password: hashPassword(password) }, id);
   return id;
 }
 
@@ -69,7 +67,7 @@ export async function destroySession() {
   jar.delete(COOKIE);
 }
 
-export type SessionUser = Doc & { name: string; email: string; plan: "trial" | "start"; trialEndsAt: string };
+export type SessionUser = Doc & { name: string; email: string };
 
 export async function getUser(): Promise<SessionUser | null> {
   await ensureSeed();

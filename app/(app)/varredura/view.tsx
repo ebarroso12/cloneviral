@@ -41,14 +41,13 @@ export default function VarreduraView({ sweeps, scripts, patterns }: any) {
           <div className="field"><label htmlFor="du">Duração</label><select id="du" value={dur} onChange={(e) => setDur(e.target.value)}>{["variado", "15", "30", "45", "60"].map((x) => <option key={x} value={x}>{x === "variado" ? "Variada" : x + " s"}</option>)}</select></div>
         </div>
         <div className="field"><label htmlFor="th">Tema (opcional)</label><input id="th" value={theme} onChange={(e) => setTheme(e.target.value)} /></div>
-        <button className="btn primary" onClick={go} disabled={busy || !types.length || (target !== "perfil" && !sample.trim())}>{busy ? "Varrendo..." : `Iniciar varredura · ${cost(n)} créditos`}</button>
-        <p className="muted tiny" style={{ marginTop: 8 }}>Se a varredura entregar menos roteiros do que o previsto, a diferença volta para você em créditos.</p>
+        <button className="btn primary" onClick={go} disabled={busy || !types.length || (target !== "perfil" && !sample.trim())}>{busy ? "Varrendo..." : "Iniciar varredura"}</button>
       </div>
       <h2 style={{ margin: "22px 0 10px" }}>Suas varreduras</h2>
       {sweeps.length === 0 && <div className="empty">Nenhuma varredura ainda.</div>}
       {sweeps.map((s: any) => (
         <div key={s.id} className="card" style={{ marginBottom: 12 }}>
-          <button className="btn ghost" onClick={() => setOpenId(openId === s.id ? null : s.id)} aria-expanded={openId === s.id}>{openId === s.id ? "▾" : "▸"} {fmtDateTimePt(s.createdAt)} · {s.delivered ?? 0} roteiros · {s.status === "pronto" ? "pronta" : s.status}{s.refund ? ` · ${s.refund} créditos devolvidos` : ""}</button>
+          <button className="btn ghost" onClick={() => setOpenId(openId === s.id ? null : s.id)} aria-expanded={openId === s.id}>{openId === s.id ? "▾" : "▸"} {fmtDateTimePt(s.createdAt)} · {s.delivered ?? 0} roteiros · {s.status === "pronto" ? "pronta" : s.status}</button>
           {openId === s.id && (
             <div style={{ marginTop: 10 }}>
               <div className="muted small" style={{ marginBottom: 6 }}>Padrões encontrados</div>

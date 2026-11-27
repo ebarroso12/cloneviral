@@ -14,7 +14,7 @@ export default function View({ rows }: { rows: any[] }) {
   return (
     <>
       <PageHead title="Stories em sequência" desc="Cinco stories em sequência, cada um com uma função: abrir, contextualizar, virar, provar e convidar." />
-      <div className="card"><div className="field"><label htmlFor="g">Objetivo da sequência</label><input id="g" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Ex.: convidar para o encontro online" /></div><button className="btn primary" onClick={go} disabled={busy || !goal.trim()}>{busy ? "Criando..." : "Criar sequência · 1 crédito"}</button></div>
+      <div className="card"><div className="field"><label htmlFor="g">Objetivo da sequência</label><input id="g" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Ex.: convidar para o encontro online" /></div><button className="btn primary" onClick={go} disabled={busy || !goal.trim()}>{busy ? "Criando..." : "Criar sequência"}</button></div>
       {rows.map((a) => (
         <div key={a.id} className="card" style={{ marginTop: 14 }}>
           <div className="row between"><b>{a.goal}</b><button className="btn sm" onClick={() => copy(a)}>Copiar tudo</button></div>

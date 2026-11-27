@@ -6,7 +6,7 @@ Atenção: o projeto da Vercel está ligado à cópia `edsonbdados-Bancodados/cl
 
 ## Provas no endereço público
 - `SupabaseStore` contra o banco real: gravar, ler, buscar, alterar e apagar; com segredo errado ou sem segredo, nada.
-- Conta temporária: cadastro só com o código, 17 telas respondendo 200, ideia persistida, varredura com texto colado, créditos descontados, PDF, segundo cadastro recusado, exclusão da conta. Banco com 0 registros depois.
+- Conta temporária: cadastro só com o código, 17 telas respondendo 200, ideia persistida, varredura com texto colado, créditos descontados (retirados depois), PDF, segundo cadastro recusado, exclusão da conta. Banco com 0 registros depois.
 - Não testado: Instagram, Gemini, execução do cron diário, aparência das telas no navegador.
 
 ## Verificação prévia
@@ -25,7 +25,7 @@ Atenção: o projeto da Vercel está ligado à cópia `edsonbdados-Bancodados/cl
 | favicon e imagem social próprios | favicon sim; imagem social não |
 
 ## Publicação agendada no site
-`.github/workflows/publicar.yml` chama `/api/cron/publish` a cada 10 minutos (grátis em repositório público; o GitHub pode atrasar). Precisa do segredo `CRON_SECRET` em `ebarroso12/cloneviral`, Settings, Secrets and variables, Actions, com o mesmo valor da Vercel. **Ainda não cadastrado.** O GitHub desliga agendamentos de repositório parado por 60 dias.
+`.github/workflows/publicar.yml` chama `/api/cron/publish` a cada 10 minutos (grátis em repositório público; o GitHub pode atrasar). Precisa do segredo `CRON_SECRET` em `ebarroso12/cloneviral`, Settings, Secrets and variables, Actions, com o mesmo valor da Vercel. Cadastrado; em 27/11/2026 as execuções agendadas terminavam com sucesso (a das 10:37 UTC sem aviso no registro). Publicação de um item real ainda não testada. O GitHub desliga agendamentos de repositório parado por 60 dias.
 
 ## Limitações conhecidas num servidor
 - Vídeo no site: até 50 MB por arquivo e 150 MB no total, em pedaços no banco; apagado depois de publicado. Provado no banco real com 6 MB; não testado pelo navegador no site.

@@ -141,21 +141,6 @@ test("IA gratuita (Gemini): usa quando há chave e cai no modelo local quando fa
   }
 });
 
-test("Depois do teste de 30 dias, o dono recebe 100 créditos por mês, uma vez por mês", async () => {
-  const { ensureCycle, grant, balance } = await import("../lib/credits");
-  const { getStore } = await import("../lib/store");
-  await getStore().insert("users", "d1", { email: "d@x.test", plan: "trial", trialEndsAt: "2026-12-26T00:00:00Z" }, "d1");
-  await grant("d1", 30, "Trial");
-  await ensureCycle("d1", new Date("2026-12-01T12:00:00Z"));
-  assert.equal(await balance("d1"), 30);
-  await ensureCycle("d1", new Date("2027-01-02T12:00:00Z"));
-  await Promise.all([ensureCycle("d1", new Date("2027-01-20T12:00:00Z")), ensureCycle("d1", new Date("2027-01-21T12:00:00Z"))]);
-  assert.equal(await balance("d1"), 130);
-  await ensureCycle("d1", new Date("2027-02-01T12:00:00Z"));
-  assert.equal(await balance("d1"), 230);
-  assert.equal((await getStore().get("users", "d1"))!.plan, "start");
-});
-
 test("Varredura com texto colado extrai o padrão de cada bloco", async () => {
   const { patternsFromText } = await import("../lib/ai");
   const p = patternsFromText("Você dorme mal?\nSalve este post.\n\n3 erros na agenda.\n\n   \n\nPare de adiar. Comente EU QUERO.", 5);

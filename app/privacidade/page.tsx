@@ -11,7 +11,7 @@ export default function Page() {
       <h2>Com quem é compartilhado</h2>
       <p>Meta (Instagram), para ler os números e publicar o que você agendar. Google Notícias, que recebe os assuntos que você pedir para buscar. Se você configurar uma IA, o provedor dela recebe o seu negócio, a sua persona e o tema pedido; no plano gratuito, o provedor pode usar esse texto para melhorar os modelos, portanto não inclua dados de pacientes ou de clientes.</p>
       <h2>Como apagar</h2>
-      <p>Em Meu plano, Excluir a conta. Para revogar o acesso ao Instagram, remova também o app nas configurações da sua conta da Meta.</p>
+      <p>Em Minha conta, Excluir a conta. Para revogar o acesso ao Instagram, remova também o app nas configurações da sua conta da Meta.</p>
     </main>
   );
 }

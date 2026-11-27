@@ -1,6 +1,5 @@
 import { route, loadCtx, bad } from "@/lib/api";
 import { getStore } from "@/lib/store";
-import { withCharge, COSTS } from "@/lib/credits";
 import { genPersonaDoc } from "@/lib/ai";
 
 export const POST = route(async (user, req) => {
@@ -12,9 +11,7 @@ export const POST = route(async (user, req) => {
   const cur = (await store.list("persona", user.id))[0];
   const filled = ["cliente", "dor", "desejo", "objecao", "decisao"].filter((k) => (answers[k] ?? "").trim().length > 8).length;
   const tunedPct = Math.round((filled / 5) * 100);
-  return withCharge(user.id, COSTS.persona, "Persona", async () => {
-    const document = genPersonaDoc(answers, ctx.business);
-    const data = { answers, document, source: "app", tunedPct };
-    return cur ? store.update("persona", cur.id, user.id, data) : store.insert("persona", user.id, data);
-  });
+  const document = genPersonaDoc(answers, ctx.business);
+  const data = { answers, document, source: "app", tunedPct };
+  return cur ? store.update("persona", cur.id, user.id, data) : store.insert("persona", user.id, data);
 });

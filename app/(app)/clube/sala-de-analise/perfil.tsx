@@ -13,7 +13,7 @@ export default function Perfil({ rows }: { rows: any[] }) {
   return (
     <>
       <p className="muted">Uma leitura do seu perfil com os números medidos, os padrões dos seus melhores posts e o que ajustar primeiro.</p>
-      <button className="btn primary" onClick={go} disabled={busy}>{busy ? "Analisando..." : "Analisar meu perfil · 2 créditos"}</button>
+      <button className="btn primary" onClick={go} disabled={busy}>{busy ? "Analisando..." : "Analisar meu perfil"}</button>
       {rows.length === 0 && <div className="empty" style={{ marginTop: 16 }}>Nenhuma análise ainda.</div>}
       {rows.map((a) => (
         <div key={a.id} className="card" style={{ marginTop: 14 }}>
