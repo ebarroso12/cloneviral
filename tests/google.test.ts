@@ -229,14 +229,14 @@ test("falha de uma fonte não derruba a outra", async () => {
   const deny = (host: string) => (c: Call): Reply => (c.url.hostname === host ? { status: 403, body: { error: { message: "sem permissão " + "x".repeat(400) } } } : numbers(c));
   await withFetch(deny("analyticsdata.googleapis.com"), async () => {
     const r = await d.googleReport("dono", 7);
-    assert.equal(r.search.ok, true);
+    assert.equal(r.search?.ok, true);
     assert.equal(r.site.ok, false);
     assert.ok(!r.site.ok && /sem permissão/.test(r.site.error) && r.site.error.length <= 200);
     assert.equal("visits" in r.site, false);
   });
   await withFetch(deny("www.googleapis.com"), async () => {
     const r = await d.googleReport("dono", 7);
-    assert.equal(r.search.ok, false);
+    assert.equal(r.search?.ok, false);
     assert.equal(r.site.ok, true);
   });
 });
@@ -273,4 +273,37 @@ test("sem nome pesquisado não consulta (filtro vazio traria todas as buscas)", 
   } finally {
     await s.update("users", "dono", "dono", { name: user!.name });
   }
+});
+
+test("sem site verificado: salva só a propriedade e o relatório traz apenas o Analytics", async () => {
+  await connected();
+  const d = await import("../lib/googleData");
+  await withFetch(numbers, () => d.saveGoogleSettings("dono", { siteUrl: "", propertyId: "111" }));
+  await withFetch(numbers, async (calls) => {
+    const r = await d.googleReport("dono", 28);
+    assert.equal(r.search, null);
+    assert.deepEqual(r.site, { ok: true, visits: 41, whatsapp: 3 });
+    assert.equal(calls.some((c) => c.url.pathname.includes("searchAnalytics")), false);
+  });
+});
+
+test("tirar o site volta ao modo só Analytics", async () => {
+  const { s, d } = await chosen();
+  await withFetch(numbers, () => d.saveGoogleSettings("dono", { siteUrl: "", propertyId: "222" }));
+  const [doc] = await s.list("google_connection", "dono");
+  assert.equal(doc.siteUrl, "");
+});
+
+test("Search Console indisponível não impede escolher a propriedade", async () => {
+  await connected();
+  const d = await import("../lib/googleData");
+  const semBusca = (c: Call): Reply => (c.url.pathname === "/webmasters/v3/sites" ? { status: 403, body: { error: { message: "API desligada" } } } : numbers(c));
+  await withFetch(semBusca, async () => {
+    const o = await d.googleOptions("dono");
+    assert.deepEqual(o.sites, []);
+    assert.match(o.sitesError!, /API desligada/);
+    assert.equal(o.properties.length, 2);
+    await d.saveGoogleSettings("dono", { siteUrl: "", propertyId: "111" });
+    await rejects(d.saveGoogleSettings("dono", { siteUrl: SITE }), 400);
+  });
 });

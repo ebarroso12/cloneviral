@@ -640,6 +640,17 @@ def google(browser):
     assert r.headers["location"].startswith("https://accounts.google.com/") and "webmasters.readonly" in r.headers["location"]
     r = p.request.get(f"{BASE}/api/google/callback?code=x&state=falso", max_redirects=0)
     assert "google_erro" in r.headers["location"]
+    # sem site verificado (resposta simulada): só os dois números do Analytics, sem zero inventado na busca
+    so_site = {"start": "2026-11-18", "end": "2026-11-24", "term": "x", "search": None, "site": {"ok": True, "visits": 41, "whatsapp": 3}}
+    p.route("**/api/google/report*", lambda rota: rota.fulfill(json=so_site))
+    ir(p, "metricas")
+    bloco = p.get_by_role("region", name="Google")
+    bloco.get_by_text("Visitas vindas do Google", exact=True).wait_for()
+    bloco.get_by_text("não só as de quem procurou o seu nome").wait_for()
+    for fora in ["Apareceu na busca", "O que digitaram", "nome pesquisado:"]:
+        assert bloco.get_by_text(fora).count() == 0, fora
+    assert bloco.get_by_text("41", exact=True).is_visible() and bloco.get_by_text("3", exact=True).is_visible()
+    assert p.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "rolagem lateral no celular"
     amigo = browser.new_context(locale="pt-BR").new_page()
     vigiar(amigo)
     assert api(amigo, "POST", "/api/auth/login", {"email": "amigo@exemplo.test", "password": "senha-de-teste-123"})[0] == 200

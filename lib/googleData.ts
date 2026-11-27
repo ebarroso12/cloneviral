@@ -41,8 +41,13 @@ async function listProperties(token: string) {
 export async function googleOptions(userId: string) {
   await ownerOnly(userId);
   const token = await accessToken(userId);
-  const [sites, properties] = await Promise.all([listSites(token), listProperties(token)]);
-  return { sites, properties };
+  // o Search Console é opcional: se falhar, a propriedade do Analytics ainda pode ser escolhida
+  let sitesError = "";
+  const [sites, properties] = await Promise.all([
+    listSites(token).catch((e) => { sitesError = e instanceof HttpError ? e.message : "O Search Console não respondeu."; return [] as string[]; }),
+    listProperties(token),
+  ]);
+  return { sites, properties, ...(sitesError ? { sitesError } : {}) };
 }
 
 export async function saveGoogleSettings(userId: string, b: { siteUrl?: unknown; propertyId?: unknown; term?: unknown }) {
@@ -60,7 +65,7 @@ export async function saveGoogleSettings(userId: string, b: { siteUrl?: unknown;
     const { sites, properties } = await googleOptions(userId);
     if (b.siteUrl !== undefined) {
       const siteUrl = String(b.siteUrl);
-      if (!sites.includes(siteUrl)) throw new HttpError(400, "Esse site não está verificado nesta conta do Google.");
+      if (siteUrl && !sites.includes(siteUrl)) throw new HttpError(400, "Esse site não está verificado nesta conta do Google.");
       data.siteUrl = siteUrl;
     }
     if (b.propertyId !== undefined) {
@@ -121,13 +126,14 @@ export async function googleReport(userId: string, days: 7 | 28 | 90) {
   await ownerOnly(userId);
   if (![7, 28, 90].includes(days)) throw new HttpError(400, "Escolha 7, 28 ou 90 dias.");
   const s = await googleStatus(userId);
-  if (s.status === "connected" && (!s.siteUrl || !s.propertyId)) throw new HttpError(409, "Escolha o site e a propriedade do Analytics na tela Conexões.");
+  if (s.status === "connected" && !s.propertyId) throw new HttpError(409, "Escolha a propriedade do Analytics na tela Conexões.");
   // filtro vazio traria todas as buscas e a tela as mostraria como buscas pelo nome
-  if (s.status === "connected" && !s.term) throw new HttpError(409, "Escreva o nome pesquisado na tela Conexões.");
+  if (s.status === "connected" && s.siteUrl && !s.term) throw new HttpError(409, "Escreva o nome pesquisado na tela Conexões.");
   const token = await accessToken(userId);
   const range = reportRange(days);
   const [search, site] = await Promise.all([
-    part(() => searchNumbers(token, s.siteUrl, s.term, range)),
+    // sem site verificado não há números de busca: null, nunca zero
+    s.siteUrl ? part(() => searchNumbers(token, s.siteUrl, s.term, range)) : Promise.resolve(null),
     part(() => siteNumbers(token, s.propertyId, range)),
   ]);
   return { ...range, term: s.term, search, site };

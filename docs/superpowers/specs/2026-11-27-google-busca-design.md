@@ -42,3 +42,6 @@ Google Meu Negócio (cota zero), Google Ads, alterar o site, gravar qualquer coi
 
 ## Fica a cargo de quem construir
 Layout do bloco, cache das consultas, nomes de arquivos e testes (Google simulado nos testes; prova real depois da conexão).
+
+## Mudança aprovada em 27/11/2026
+O site não está verificado no Search Console e o dono escolheu não verificar agora. O site passa a ser opcional: sem ele, o bloco mostra só os passos 3 e 4 e explica a falta dos outros dois (nunca zero).
